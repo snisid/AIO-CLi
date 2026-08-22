@@ -43,3 +43,24 @@
 [submodule "external/taste-skill"]
 	path = external/taste-skill
 	url = https://github.com/Leonxlnx/taste-skill.git
+[submodule "external_agents/ui-ux-pro-max-skill"]
+	path = external_agents/ui-ux-pro-max-skill
+	url = https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
+[submodule "external_agents/ECC"]
+	path = external_agents/ECC
+	url = https://github.com/affaan-m/ECC.git
+[submodule "external_agents/OpenViking"]
+	path = external_agents/OpenViking
+	url = https://github.com/volcengine/OpenViking.git
+[submodule "external_agents/impeccable"]
+	path = external_agents/impeccable
+	url = https://github.com/pbakaus/impeccable.git
+[submodule "external_agents/awesome-design-md"]
+	path = external_agents/awesome-design-md
+	url = https://github.com/VoltAgent/awesome-design-md.git
+[submodule "external_agents/img2threejs"]
+	path = external_agents/img2threejs
+	url = https://github.com/img2threejs/img2threejs.git
+[submodule "external_agents/taste-skill"]
+	path = external_agents/taste-skill
+	url = https://github.com/Leonxlnx/taste-skill.git

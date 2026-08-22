@@ -127,6 +127,7 @@ class GStackAgent(ExternalAgentBase):
     def _find_gstack(self) -> Optional[Path]:
         """Find gstack installation directory."""
         candidates = [
+            Path("/workspace/external_agents/gstack"),
             Path.home() / ".claude" / "skills" / "gstack",
             Path("/workspace/external/gstack"),
         ]
@@ -198,6 +199,7 @@ class ClaudeMEMAgent(ExternalAgentBase):
     def _find_claude_mem(self) -> Optional[Path]:
         """Find claude-mem installation directory."""
         candidates = [
+            Path("/workspace/external_agents/claude-mem"),
             Path.home() / ".claude" / "skills" / "claude-mem",
             Path("/workspace/external/claude-mem"),
         ]
@@ -273,6 +275,7 @@ class SecurityReviewAgent(ExternalAgentBase):
     def _find_security_prompts(self) -> Optional[Path]:
         """Find security review prompts directory."""
         candidates = [
+            Path("/workspace/external_agents/security-review"),
             Path("/workspace/external/security-review"),
             Path.home() / ".claude" / "skills" / "security-review",
         ]
@@ -358,6 +361,7 @@ class CodeReviewAgent(ExternalAgentBase):
     def _find_code_review_skills(self) -> Optional[Path]:
         """Find code review skills directory."""
         candidates = [
+            Path("/workspace/external_agents/code-review"),
             Path("/workspace/external/code-review"),
             Path.home() / ".claude" / "skills" / "code-review",
         ]
@@ -426,6 +430,7 @@ class FrontendDesignAgent(ExternalAgentBase):
     def _find_design_skills(self) -> Optional[Path]:
         """Find frontend design skills directory."""
         candidates = [
+            Path("/workspace/external_agents/frontend-design"),
             Path("/workspace/external/frontend-design"),
             Path.home() / ".claude" / "skills" / "frontend-design",
         ]
@@ -494,6 +499,7 @@ class SuperPowersAgent(ExternalAgentBase):
     def _find_superpowers(self) -> Optional[Path]:
         """Find superpowers installation directory."""
         candidates = [
+            Path("/workspace/external_agents/superpowers"),
             Path("/workspace/external/superpowers"),
             Path.home() / ".claude" / "skills" / "superpowers",
         ]
@@ -541,6 +547,7 @@ class ComposioAgent(Agent):
     def _find_composio(self) -> Optional[Path]:
         """Find composio installation directory."""
         candidates = [
+            Path("/workspace/external_agents/composio"),
             Path("/workspace/external/composio/python"),
             Path.home() / ".local" / "lib" / "python3.12" / "site-packages" / "composio",
         ]
@@ -857,6 +864,7 @@ class UIUXProMaxAgent(ExternalAgentBase):
     def _find_uiux_skills(self) -> Optional[Path]:
         """Find UI/UX Pro Max skills directory."""
         candidates = [
+            Path("/workspace/external_agents/ui-ux-pro-max-skill"),
             Path("/workspace/external/ui-ux-pro-max-skill"),
             Path.home() / ".claude" / "skills" / "ui-ux-pro-max-skill",
         ]
@@ -945,6 +953,7 @@ class ECCAgent(ExternalAgentBase):
     def _find_ecc(self) -> Optional[Path]:
         """Find ECC installation directory."""
         candidates = [
+            Path("/workspace/external_agents/ECC"),
             Path("/workspace/external/ECC"),
             Path.home() / ".claude" / "skills" / "ECC",
         ]
