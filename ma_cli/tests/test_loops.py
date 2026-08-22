@@ -1,17 +1,14 @@
 """Tests for loop engine."""
 
+
 import pytest
-import asyncio
 
 from ma_cli.loops.engine import (
-    Loop,
-    LoopStep,
-    LoopState,
-    LoopResult,
-    LoopStatus,
-    LoopEngine,
-    RetryPolicy,
     ApprovalPolicy,
+    Loop,
+    LoopEngine,
+    LoopStep,
+    RetryPolicy,
 )
 
 

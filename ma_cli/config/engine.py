@@ -6,10 +6,9 @@ This module handles loading, validating, and managing MA-CLI configuration.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -22,7 +21,7 @@ class ProviderConfig:
     type: str = "openai-compatible"
     enabled: bool = True
     base_url: str = ""
-    api_key: Optional[str] = None
+    api_key: str | None = None
     timeout: int = 60
     retry_count: int = 3
     headers: dict[str, str] = field(default_factory=dict)
@@ -32,8 +31,8 @@ class ProviderConfig:
 class ModelAlias:
     """Model alias configuration."""
     provider: str
-    model_id: Optional[str] = None  # None means auto-discover
-    fallback: Optional[str] = None
+    model_id: str | None = None  # None means auto-discover
+    fallback: str | None = None
 
 
 @dataclass
@@ -42,7 +41,7 @@ class RuntimeConfig:
     autonomy_level: AutonomyLevel = AutonomyLevel.SUPERVISED_AUTO
     default_agent: str = "native"
     default_provider: str = "omniroute"
-    workspace_path: Optional[str] = None
+    workspace_path: str | None = None
     sandbox_enabled: bool = True
     audit_logging: bool = True
     max_concurrent_tasks: int = 5
@@ -63,7 +62,6 @@ class Config:
 
 class ConfigurationError(Exception):
     """Configuration-related error."""
-    pass
 
 
 class ConfigurationEngine:
@@ -75,9 +73,9 @@ class ConfigurationEngine:
     
     DEFAULT_CONFIG_PATH = Path.home() / ".ma-cli" / "config.yaml"
     
-    def __init__(self, config_path: Optional[Path] = None):
+    def __init__(self, config_path: Path | None = None):
         self.config_path = config_path or self.DEFAULT_CONFIG_PATH
-        self._config: Optional[Config] = None
+        self._config: Config | None = None
     
     def load(self) -> Config:
         """
@@ -107,7 +105,7 @@ class ConfigurationEngine:
         except Exception as e:
             raise ConfigurationError(f"Failed to load config: {e}")
     
-    def save(self, config: Optional[Config] = None) -> None:
+    def save(self, config: Config | None = None) -> None:
         """
         Save configuration to file.
         
@@ -134,12 +132,12 @@ class ConfigurationEngine:
             return self.load()
         return self._config
     
-    def get_provider(self, name: str) -> Optional[ProviderConfig]:
+    def get_provider(self, name: str) -> ProviderConfig | None:
         """Get provider configuration by name."""
         config = self.get()
         return config.providers.get(name)
     
-    def get_model_alias(self, alias: str) -> Optional[ModelAlias]:
+    def get_model_alias(self, alias: str) -> ModelAlias | None:
         """Get model alias configuration."""
         config = self.get()
         return config.models.get(alias)
@@ -327,7 +325,7 @@ class ConfigurationEngine:
 
 
 # Global configuration instance
-_config_engine: Optional[ConfigurationEngine] = None
+_config_engine: ConfigurationEngine | None = None
 
 
 def get_config_engine() -> ConfigurationEngine:

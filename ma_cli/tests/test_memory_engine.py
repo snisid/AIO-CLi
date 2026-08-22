@@ -5,29 +5,27 @@ This module contains comprehensive tests for the memory system,
 including backend operations, engine functionality, and session management.
 """
 
-import pytest
 import json
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from ma_cli.memory.engine import (
-    MemoryType,
-    MemoryScope,
-    MemoryEntry,
     ConversationMessage,
-    MemorySummary,
-    MemoryBackend,
-    SQLiteMemoryBackend,
     MemoryEngine,
-    SessionState,
+    MemoryEntry,
+    MemoryScope,
+    MemorySummary,
+    MemoryType,
     SessionManager,
+    SQLiteMemoryBackend,
     create_memory_engine,
     create_session_manager,
     format_memory_summary,
     format_session_list,
 )
-
 
 # ============================================================================
 # Fixtures

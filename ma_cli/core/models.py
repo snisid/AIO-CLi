@@ -7,12 +7,11 @@ including tasks, events, state, and permissions.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
-import uuid
-
+from typing import Any
 
 # ============================================================================
 # Enums
@@ -121,26 +120,26 @@ class Task:
     priority: int = 5  # 1-10, higher is more urgent
     
     # Task assignment
-    assigned_agent: Optional[str] = None
-    assigned_role: Optional[str] = None
+    assigned_agent: str | None = None
+    assigned_role: str | None = None
     required_capabilities: list[str] = field(default_factory=list)
     
     # Model requirements
-    preferred_model: Optional[str] = None
+    preferred_model: str | None = None
     model_constraints: dict[str, Any] = field(default_factory=dict)
     
     # Execution tracking
     created_at: datetime = field(default_factory=datetime.utcnow)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     
     # Dependencies
     dependencies: list[str] = field(default_factory=list)
     blocks: list[str] = field(default_factory=list)
     
     # Results
-    result: Optional[str] = None
-    error: Optional[str] = None
+    result: str | None = None
+    error: str | None = None
     outputs: dict[str, Any] = field(default_factory=dict)
     
     # Metadata
@@ -159,7 +158,7 @@ class Event:
     payload: dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.utcnow)
     source: str = ""  # Component that emitted the event
-    correlation_id: Optional[str] = None  # For tracing related events
+    correlation_id: str | None = None  # For tracing related events
     
     def to_dict(self) -> dict[str, Any]:
         """Convert event to dictionary."""
@@ -191,8 +190,8 @@ class State:
     provider_health: dict[str, HealthStatus] = field(default_factory=dict)
     
     # Workspace
-    current_workspace: Optional[str] = None
-    workspace_path: Optional[str] = None
+    current_workspace: str | None = None
+    workspace_path: str | None = None
     
     # Timing
     started_at: datetime = field(default_factory=datetime.utcnow)
@@ -237,7 +236,7 @@ class PermissionPolicy:
     permissions: list[Permission] = field(default_factory=list)
     approval_required_actions: list[str] = field(default_factory=list)
     
-    def get_permission(self, action: str) -> Optional[Permission]:
+    def get_permission(self, action: str) -> Permission | None:
         """Get permission for an action."""
         for perm in self.permissions:
             if perm.action == action:
@@ -261,7 +260,7 @@ class ExecutionResult:
     
     success: bool
     output: str = ""
-    error: Optional[str] = None
+    error: str | None = None
     duration_ms: int = 0
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -296,10 +295,10 @@ class ValidationReport:
     status: str = "PENDING"  # PENDING, SUCCESS, FAILED, REQUIRES_HUMAN
     
     # Details
-    test_results: Optional[dict[str, Any]] = None
+    test_results: dict[str, Any] | None = None
     code_review_results: list[ReviewResult] = field(default_factory=list)
     security_review_results: list[ReviewResult] = field(default_factory=list)
-    build_output: Optional[str] = None
+    build_output: str | None = None
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     
@@ -324,7 +323,7 @@ class ValidationReport:
         
         return True
     
-    def get_block_reason(self) -> Optional[str]:
+    def get_block_reason(self) -> str | None:
         """Get reason why finalization is blocked."""
         if self.reviews_skipped:
             return f"Reviews were skipped: {', '.join(self.skipped_reviews)}. Quality gate violated."
@@ -344,7 +343,7 @@ class HealthCheck:
     component: str
     healthy: bool
     status: HealthStatus = HealthStatus.UNKNOWN
-    message: Optional[str] = None
-    latency_ms: Optional[float] = None
+    message: str | None = None
+    latency_ms: float | None = None
     timestamp: datetime = field(default_factory=datetime.utcnow)
     details: dict[str, Any] = field(default_factory=dict)

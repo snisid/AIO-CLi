@@ -18,18 +18,16 @@ from __future__ import annotations
 import asyncio
 import shutil
 import subprocess
-import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ..core.models import (
-    Task,
     AgentStatus,
-    HealthStatus,
     ExecutionResult,
+    HealthStatus,
     ReviewResult,
+    Task,
 )
 from .base import Agent, AgentInfo
 
@@ -59,9 +57,9 @@ class AgentConfig:
 class CLIInfo:
     """Information about a detected CLI."""
     exists: bool
-    path: Optional[str] = None
-    version: Optional[str] = None
-    error: Optional[str] = None
+    path: str | None = None
+    version: str | None = None
+    error: str | None = None
 
 
 @dataclass
@@ -105,13 +103,13 @@ class ExternalAgentBase(Agent):
     
     CONFIG: AgentConfig
     
-    def __init__(self, config: Optional[AgentConfig] = None):
+    def __init__(self, config: AgentConfig | None = None):
         self._config = config or self.CONFIG
         self._status = AgentStatus.OFFLINE
         self._health = HealthStatus.UNKNOWN
-        self._cli_info: Optional[CLIInfo] = None
-        self._current_process: Optional[asyncio.subprocess.Process] = None
-        self._last_check: Optional[datetime] = None
+        self._cli_info: CLIInfo | None = None
+        self._current_process: asyncio.subprocess.Process | None = None
+        self._last_check: datetime | None = None
         
     @property
     def id(self) -> str:
@@ -577,9 +575,9 @@ class AgentRegistry:
     Provides centralized access to all available agents.
     """
     
-    _instance: Optional["AgentRegistry"] = None
+    _instance: AgentRegistry | None = None
     
-    def __new__(cls) -> "AgentRegistry":
+    def __new__(cls) -> AgentRegistry:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._agents = {}
@@ -607,11 +605,11 @@ class AgentRegistry:
         for agent in agents:
             self._agents[agent.id] = agent
     
-    def get(self, agent_id: str) -> Optional[Agent]:
+    def get(self, agent_id: str) -> Agent | None:
         """Get an agent by ID."""
         return self._agents.get(agent_id)
     
-    def get_by_name(self, name: str) -> Optional[Agent]:
+    def get_by_name(self, name: str) -> Agent | None:
         """Get an agent by name."""
         for agent in self._agents.values():
             if agent.name.lower() == name.lower():

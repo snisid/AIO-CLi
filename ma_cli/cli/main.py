@@ -6,20 +6,22 @@ This module provides the command-line interface for MA-CLI.
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 import click
 
 from .. import __version__
-from ..config.engine import ConfigurationEngine, Config
-from ..state.manager import StateManager, get_state_manager
-from ..events.bus import EventBus, get_event_bus
-from ..security.permission_engine import PermissionEngine, get_permission_engine
-from ..workspace.manager import WorkspaceManager, get_workspace_manager
-from ..supervisor.engine import Supervisor, get_supervisor
-from ..memory.engine import MemoryEngine, SessionManager, create_memory_engine, create_session_manager
-from ..memory.engine import format_memory_summary, format_session_list
+from ..config.engine import ConfigurationEngine
 from ..core.models import AgentStatus, HealthStatus
+from ..events.bus import get_event_bus
+from ..memory.engine import (
+    create_memory_engine,
+    create_session_manager,
+    format_memory_summary,
+    format_session_list,
+)
+from ..state.manager import get_state_manager
+from ..supervisor.engine import get_supervisor
+from ..workspace.manager import get_workspace_manager
 
 
 @click.group()
@@ -30,13 +32,11 @@ def cli():
     An independent agent orchestration platform capable of planning,
     task decomposition, agent selection, model selection, and more.
     """
-    pass
 
 
 @cli.command()
 def init():
     """Initialize a new MA-CLI project."""
-    from pathlib import Path
     
     click.echo("Initializing MA-CLI project...")
     
@@ -70,7 +70,6 @@ def init():
 @cli.command()
 def setup():
     """Set up MA-CLI configuration and environment."""
-    from pathlib import Path
     
     click.echo("Setting up MA-CLI...")
     
@@ -270,7 +269,7 @@ def status():
     # Get event bus stats
     event_bus = get_event_bus()
     stats = event_bus.get_stats()
-    click.echo(f"\nEvent Bus:")
+    click.echo("\nEvent Bus:")
     click.echo(f"  Subscribers: {stats['total_subscribers']}")
     click.echo(f"  Events in History: {stats['events_in_history']}")
     
@@ -287,7 +286,6 @@ def status():
 @cli.group()
 def agents():
     """Agent management commands."""
-    pass
 
 
 @agents.command("list")
@@ -366,7 +364,6 @@ def agent_status():
 @cli.group()
 def provider():
     """Provider management commands."""
-    pass
 
 
 @provider.command("list")
@@ -413,7 +410,7 @@ def test_provider(provider_name: str):
         
         if response.status_code == 200:
             models = response.json().get("models", [])
-            click.echo(f"✓ Connected successfully")
+            click.echo("✓ Connected successfully")
             click.echo(f"  Available models: {len(models)}")
         else:
             click.echo(f"✗ Connection failed: HTTP {response.status_code}")
@@ -428,7 +425,6 @@ def test_provider(provider_name: str):
 @cli.group()
 def model():
     """Model management commands."""
-    pass
 
 
 @model.command("list")
@@ -482,7 +478,6 @@ def config():
 @cli.group()
 def memory():
     """Memory management commands."""
-    pass
 
 
 @memory.command("list")
@@ -533,7 +528,6 @@ def cleanup_memory(days: int):
 @click.option("--type", "memory_type", default=None, help="Filter by memory type")
 def export_memory(output_path: str, memory_type: str):
     """Export memory to JSON file."""
-    from pathlib import Path
     
     memory_engine = create_memory_engine()
     filters = None
@@ -548,7 +542,6 @@ def export_memory(output_path: str, memory_type: str):
 @click.argument("input_path", type=click.Path(exists=True))
 def import_memory(input_path: str):
     """Import memory from JSON file."""
-    from pathlib import Path
     
     memory_engine = create_memory_engine()
     count = memory_engine.import_memory(Path(input_path))
@@ -558,7 +551,6 @@ def import_memory(input_path: str):
 @cli.group()
 def sessions():
     """Session management commands."""
-    pass
 
 
 @sessions.command("list")
@@ -612,13 +604,13 @@ def show_session(session_id: str):
     click.echo(f"Workspace: {state.workspace_path or 'N/A'}")
     click.echo(f"Request: {state.request or 'N/A'}")
     click.echo(f"Plan: {state.plan or 'N/A'}")
-    click.echo(f"\nTasks:")
+    click.echo("\nTasks:")
     click.echo(f"  Total: {len(state.tasks)}")
     click.echo(f"  Completed: {len(state.completed_tasks)}")
     click.echo(f"  Pending: {len(state.pending_tasks)}")
     
     if state.agent_states:
-        click.echo(f"\nAgent States:")
+        click.echo("\nAgent States:")
         for agent, status in state.agent_states.items():
             click.echo(f"  {agent}: {status}")
     
@@ -626,7 +618,7 @@ def show_session(session_id: str):
         click.echo(f"\nOutputs: {len(state.outputs)} items")
     
     if state.errors:
-        click.echo(f"\nErrors:")
+        click.echo("\nErrors:")
         for error in state.errors:
             click.echo(f"  - {error}")
 
@@ -634,7 +626,6 @@ def show_session(session_id: str):
 @cli.group()
 def loop():
     """Loop management commands."""
-    pass
 
 
 @loop.command("list")

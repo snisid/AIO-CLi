@@ -1,11 +1,9 @@
 """Tests for event bus."""
 
-import pytest
 import asyncio
-from datetime import datetime
 
-from ma_cli.events.bus import EventBus, get_event_bus, emit_event
 from ma_cli.core.models import Event, EventType
+from ma_cli.events.bus import EventBus, emit_event, get_event_bus
 
 
 class TestEventBus:
