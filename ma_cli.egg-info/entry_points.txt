@@ -1,0 +1,2 @@
+[console_scripts]
+ma-cli = ma_cli.cli.main:main
