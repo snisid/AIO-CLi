@@ -523,7 +523,7 @@ class SuperPowersAgent(ExternalAgentBase):
 # Composio Plugin Integration
 # ============================================================================
 
-class ComposioAgent(Agent):
+class ComposioAgent(ExternalAgentBase):
     """
     Adapter for Composio - Pre-authenticated Toolkits for AI Agents.
     
@@ -536,11 +536,24 @@ class ComposioAgent(Agent):
     - API integrations
     """
     
+    CONFIG = AgentConfig(
+        name="ComposioAgent",
+        cli_command="composio",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=300,
+        required_env_vars=["COMPOSIO_API_KEY"],
+        capabilities=[
+            "tool_integration", "api_access", "authentication_management",
+            "session_management", "multi_service_orchestration"
+        ],
+        roles=["integration_specialist", "api_orchestrator", "tool_manager"]
+    )
+    
     def __init__(self, api_key: Optional[str] = None, composio_path: Optional[Path] = None):
+        super().__init__()
         self.api_key = api_key or os.environ.get("COMPOSIO_API_KEY")
         self.composio_path = composio_path or self._find_composio()
-        self._status = AgentStatus.OFFLINE
-        self._health = HealthStatus.UNKNOWN
         self._session = None
         self._tools_cache = []
         
