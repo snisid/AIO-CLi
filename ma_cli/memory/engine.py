@@ -22,13 +22,19 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+import zoneinfo
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
+
+
+def _now_utc() -> datetime:
+    """Get current UTC time in a timezone-aware manner."""
+    return datetime.now(timezone.utc)
 
 # ============================================================================
 # Memory Types and Enums
@@ -68,15 +74,15 @@ class MemoryEntry:
     metadata: dict[str, Any] = field(default_factory=dict)
     
     # Context
-    project_id: str | None = None
+    project_id: str | None = 'default-project'
     session_id: str | None = None
     task_id: str | None = None
     run_id: str | None = None
     agent_id: str | None = None
     
     # Timestamps
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=_now_utc)
+    updated_at: datetime = field(default_factory=_now_utc)
     expires_at: datetime | None = None
     
     # Access control
@@ -141,7 +147,7 @@ class ConversationMessage:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     role: str = "user"  # user, assistant, system
     content: str = ""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=_now_utc)
     session_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     
@@ -392,7 +398,7 @@ class SQLiteMemoryBackend(MemoryBackend):
                 UPDATE memory_entries 
                 SET access_count = access_count + 1, last_accessed = ?
                 WHERE id = ?
-            """, (datetime.utcnow().isoformat(), entry_id))
+            """, (_now_utc().isoformat(), entry_id))
             conn.commit()
             
             return self._row_to_entry(row)
@@ -468,7 +474,7 @@ class SQLiteMemoryBackend(MemoryBackend):
     
     def update(self, entry: MemoryEntry) -> None:
         """Update a memory entry."""
-        entry.updated_at = datetime.utcnow()
+        entry.updated_at = _now_utc()
         self.store(entry)
     
     def delete(self, entry_id: str) -> bool:
@@ -556,7 +562,7 @@ class SQLiteMemoryBackend(MemoryBackend):
         
         if older_than is None:
             # Default: clean up entries older than 90 days that are expired
-            older_than = datetime.utcnow() - timedelta(days=90)
+            older_than = _now_utc() - timedelta(days=90)
         
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -679,9 +685,9 @@ class MemoryEngine:
         self.backend = backend or SQLiteMemoryBackend()
         self.backend.initialize()
         self._current_session_id: str | None = None
-        self._current_project_id: str | None = None
+        self._current_project_id: str | None = 'default-project'
     
-    def set_context(self, session_id: str | None = None, project_id: str | None = None) -> None:
+    def set_context(self, session_id: str | None = None, project_id: str | None = 'default-project') -> None:
         """Set the current context for memory operations."""
         self._current_session_id = session_id
         self._current_project_id = project_id
@@ -770,7 +776,7 @@ class MemoryEngine:
         self,
         key: str,
         value: Any,
-        project_id: str | None = None,
+        project_id: str | None = 'default-project',
         metadata: dict[str, Any] | None = None
     ) -> str:
         """Store project-specific context."""
@@ -790,7 +796,7 @@ class MemoryEngine:
     def get_project_context(
         self,
         key: str,
-        project_id: str | None = None
+        project_id: str | None = 'default-project'
     ) -> Any | None:
         """Retrieve project-specific context."""
         project_id = project_id or self._current_project_id
@@ -808,7 +814,7 @@ class MemoryEngine:
     
     def get_all_project_context(
         self,
-        project_id: str | None = None
+        project_id: str | None = 'default-project'
     ) -> dict[str, Any]:
         """Get all project context."""
         project_id = project_id or self._current_project_id
@@ -1003,7 +1009,7 @@ class MemoryEngine:
     
     def cleanup_old_memory(self, days: int = 90) -> int:
         """Clean up old memory entries."""
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = _now_utc() - timedelta(days=days)
         return self.backend.cleanup(cutoff)
     
     def export_memory(
@@ -1015,7 +1021,7 @@ class MemoryEngine:
         entries = self.backend.search("", filters or {})
         
         data = {
-            "exported_at": datetime.utcnow().isoformat(),
+            "exported_at": _now_utc().isoformat(),
             "total_entries": len(entries),
             "entries": [e.to_dict() for e in entries]
         }
@@ -1079,12 +1085,12 @@ class SessionManager:
     def create_session(
         self,
         workspace_path: str | None = None,
-        project_id: str | None = None,
+        project_id: str | None = 'default-project',
         request: str | None = None
     ) -> SessionState:
         """Create a new session."""
         session_id = str(uuid.uuid4())
-        now = datetime.utcnow()
+        now = _now_utc()
         
         state = SessionState(
             session_id=session_id,
@@ -1117,7 +1123,7 @@ class SessionManager:
         if state is None:
             return
         
-        state.last_activity = datetime.utcnow()
+        state.last_activity = _now_utc()
         
         self.memory.store_run_context(
             run_id=state.session_id,

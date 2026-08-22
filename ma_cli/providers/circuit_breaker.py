@@ -9,9 +9,15 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
+
+
+def _now_utc() -> datetime:
+    """Get current UTC time in a timezone-aware manner."""
+    return datetime.now(timezone.utc)
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +46,7 @@ class CircuitStats:
         """Record a successful call."""
         self.total_calls += 1
         self.successful_calls += 1
-        self.last_success_time = datetime.utcnow()
+        self.last_success_time = _now_utc()
         self.consecutive_failures = 0
         self.consecutive_successes += 1
     
@@ -48,7 +54,7 @@ class CircuitStats:
         """Record a failed call."""
         self.total_calls += 1
         self.failed_calls += 1
-        self.last_failure_time = datetime.utcnow()
+        self.last_failure_time = _now_utc()
         self.consecutive_successes = 0
         self.consecutive_failures += 1
     
@@ -116,7 +122,7 @@ class CircuitBreaker:
         if self._opened_at is None:
             return False
         
-        elapsed = (datetime.utcnow() - self._opened_at).total_seconds()
+        elapsed = (_now_utc() - self._opened_at).total_seconds()
         return elapsed >= self.config.timeout_seconds
     
     def _transition_to_half_open(self) -> None:
@@ -132,7 +138,7 @@ class CircuitBreaker:
             f"Circuit '{self.name}' OPENED after {self.config.failure_threshold} failures"
         )
         self._state = CircuitState.OPEN
-        self._opened_at = datetime.utcnow()
+        self._opened_at = _now_utc()
         self._half_open_calls = 0
     
     def _transition_to_closed(self) -> None:
