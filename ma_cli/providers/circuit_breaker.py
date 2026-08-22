@@ -7,11 +7,11 @@ Prevents cascading failures by temporarily disabling failing providers.
 from __future__ import annotations
 
 import logging
-import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,8 @@ class CircuitStats:
     successful_calls: int = 0
     failed_calls: int = 0
     rejected_calls: int = 0
-    last_failure_time: Optional[datetime] = None
-    last_success_time: Optional[datetime] = None
+    last_failure_time: datetime | None = None
+    last_success_time: datetime | None = None
     consecutive_failures: int = 0
     consecutive_successes: int = 0
     
@@ -88,13 +88,13 @@ class CircuitBreaker:
     def __init__(
         self,
         name: str,
-        config: Optional[CircuitConfig] = None
+        config: CircuitConfig | None = None
     ):
         self.name = name
         self.config = config or CircuitConfig()
         self._state = CircuitState.CLOSED
         self._stats = CircuitStats()
-        self._opened_at: Optional[datetime] = None
+        self._opened_at: datetime | None = None
         self._half_open_calls: int = 0
         self._lock: Any = None  # Can use threading.Lock if needed
         
@@ -166,7 +166,7 @@ class CircuitBreaker:
             logger.debug(f"Circuit '{self.name}' ignored exception: {e}")
             raise
             
-        except Exception as e:
+        except Exception:
             self._on_failure()
             raise
     
@@ -192,7 +192,7 @@ class CircuitBreaker:
             logger.debug(f"Circuit '{self.name}' ignored exception: {e}")
             raise
             
-        except Exception as e:
+        except Exception:
             self._on_failure()
             raise
     
@@ -263,7 +263,6 @@ class CircuitBreaker:
 
 class CircuitOpenError(Exception):
     """Raised when circuit breaker is open."""
-    pass
 
 
 class CircuitBreakerRegistry:
@@ -273,9 +272,9 @@ class CircuitBreakerRegistry:
     Provides centralized management for all provider circuits.
     """
     
-    _instance: Optional["CircuitBreakerRegistry"] = None
+    _instance: CircuitBreakerRegistry | None = None
     
-    def __new__(cls) -> "CircuitBreakerRegistry":
+    def __new__(cls) -> CircuitBreakerRegistry:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._breakers: dict[str, CircuitBreaker] = {}
@@ -284,14 +283,14 @@ class CircuitBreakerRegistry:
     def get_or_create(
         self,
         name: str,
-        config: Optional[CircuitConfig] = None
+        config: CircuitConfig | None = None
     ) -> CircuitBreaker:
         """Get existing circuit or create new one."""
         if name not in self._breakers:
             self._breakers[name] = CircuitBreaker(name, config)
         return self._breakers[name]
     
-    def get(self, name: str) -> Optional[CircuitBreaker]:
+    def get(self, name: str) -> CircuitBreaker | None:
         """Get circuit by name."""
         return self._breakers.get(name)
     

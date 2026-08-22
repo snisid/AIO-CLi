@@ -8,11 +8,11 @@ allowing components to communicate through events.
 from __future__ import annotations
 
 import asyncio
-from collections import defaultdict
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Callable, Optional
 import uuid
+from collections import defaultdict
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from ..core.models import Event, EventType
 
@@ -38,7 +38,7 @@ class EventBus:
     Provides publish/subscribe functionality for system events.
     """
     
-    _instance: Optional["EventBus"] = None
+    _instance: EventBus | None = None
     
     def __init__(self):
         self._subscribers: dict[EventType, list[Subscription]] = defaultdict(list)
@@ -48,7 +48,7 @@ class EventBus:
         self._lock = asyncio.Lock()
     
     @classmethod
-    def get_instance(cls) -> "EventBus":
+    def get_instance(cls) -> EventBus:
         """Get singleton instance of the event bus."""
         if cls._instance is None:
             cls._instance = EventBus()
@@ -57,7 +57,7 @@ class EventBus:
     def subscribe(
         self,
         callback: Callable[[Event], Any],
-        event_types: Optional[list[EventType]] = None,
+        event_types: list[EventType] | None = None,
         once: bool = False
     ) -> str:
         """
@@ -134,7 +134,7 @@ class EventBus:
                                 None, sub.callback, event
                             )
                         ))
-                except Exception as e:
+                except Exception:
                     # Log error but continue
                     pass
                 
@@ -155,7 +155,7 @@ class EventBus:
                         if sub in self._subscribers[event_type]:
                             self._subscribers[event_type].remove(sub)
     
-    def emit(self, event_type: EventType, payload: dict[str, Any] = None, source: str = "", correlation_id: Optional[str] = None) -> Event:
+    def emit(self, event_type: EventType, payload: dict[str, Any] = None, source: str = "", correlation_id: str | None = None) -> Event:
         """
         Create and publish an event synchronously.
         
@@ -190,7 +190,7 @@ class EventBus:
     
     def get_history(
         self,
-        event_type: Optional[EventType] = None,
+        event_type: EventType | None = None,
         limit: int = 100
     ) -> list[Event]:
         """
@@ -226,7 +226,7 @@ class EventBus:
 
 
 # Global event bus instance
-_event_bus: Optional[EventBus] = None
+_event_bus: EventBus | None = None
 
 
 def get_event_bus() -> EventBus:
@@ -241,7 +241,7 @@ def emit_event(
     event_type: EventType,
     payload: dict[str, Any] = None,
     source: str = "",
-    correlation_id: Optional[str] = None
+    correlation_id: str | None = None
 ) -> Event:
     """Emit an event to the global event bus."""
     return get_event_bus().emit(event_type, payload, source, correlation_id)

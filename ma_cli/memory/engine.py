@@ -21,16 +21,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
-import hashlib
+import uuid
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
-import uuid
-
+from typing import Any
 
 # ============================================================================
 # Memory Types and Enums
@@ -70,23 +68,23 @@ class MemoryEntry:
     metadata: dict[str, Any] = field(default_factory=dict)
     
     # Context
-    project_id: Optional[str] = None
-    session_id: Optional[str] = None
-    task_id: Optional[str] = None
-    run_id: Optional[str] = None
-    agent_id: Optional[str] = None
+    project_id: str | None = None
+    session_id: str | None = None
+    task_id: str | None = None
+    run_id: str | None = None
+    agent_id: str | None = None
     
     # Timestamps
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
     
     # Access control
     privacy_level: str = "normal"  # normal, sensitive, private
     
     # Usage tracking
     access_count: int = 0
-    last_accessed: Optional[datetime] = None
+    last_accessed: datetime | None = None
     
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -144,7 +142,7 @@ class ConversationMessage:
     role: str = "user"  # user, assistant, system
     content: str = ""
     timestamp: datetime = field(default_factory=datetime.utcnow)
-    session_id: Optional[str] = None
+    session_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     
     def to_dict(self) -> dict[str, Any]:
@@ -167,8 +165,8 @@ class MemorySummary:
     by_type: dict[str, int] = field(default_factory=dict)
     by_scope: dict[str, int] = field(default_factory=dict)
     storage_size_bytes: int = 0
-    oldest_entry: Optional[datetime] = None
-    newest_entry: Optional[datetime] = None
+    oldest_entry: datetime | None = None
+    newest_entry: datetime | None = None
 
 
 # ============================================================================
@@ -181,42 +179,34 @@ class MemoryBackend(ABC):
     @abstractmethod
     def initialize(self) -> None:
         """Initialize the backend."""
-        pass
     
     @abstractmethod
     def store(self, entry: MemoryEntry) -> str:
         """Store a memory entry. Returns entry ID."""
-        pass
     
     @abstractmethod
-    def retrieve(self, entry_id: str) -> Optional[MemoryEntry]:
+    def retrieve(self, entry_id: str) -> MemoryEntry | None:
         """Retrieve a memory entry by ID."""
-        pass
     
     @abstractmethod
-    def search(self, query: str, filters: Optional[dict[str, Any]] = None) -> list[MemoryEntry]:
+    def search(self, query: str, filters: dict[str, Any] | None = None) -> list[MemoryEntry]:
         """Search for memory entries."""
-        pass
     
     @abstractmethod
     def update(self, entry: MemoryEntry) -> None:
         """Update a memory entry."""
-        pass
     
     @abstractmethod
     def delete(self, entry_id: str) -> bool:
         """Delete a memory entry."""
-        pass
     
     @abstractmethod
-    def get_summary(self, filters: Optional[dict[str, Any]] = None) -> MemorySummary:
+    def get_summary(self, filters: dict[str, Any] | None = None) -> MemorySummary:
         """Get memory summary."""
-        pass
     
     @abstractmethod
-    def cleanup(self, older_than: Optional[datetime] = None) -> int:
+    def cleanup(self, older_than: datetime | None = None) -> int:
         """Clean up old entries. Returns count deleted."""
-        pass
 
 
 # ============================================================================
@@ -226,7 +216,7 @@ class MemoryBackend(ABC):
 class SQLiteMemoryBackend(MemoryBackend):
     """SQLite-based memory backend."""
     
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         if db_path is None:
             db_path = Path.home() / ".ma-cli" / "memory" / "ma_cli_memory.db"
         
@@ -382,7 +372,7 @@ class SQLiteMemoryBackend(MemoryBackend):
         
         return entry.id
     
-    def retrieve(self, entry_id: str) -> Optional[MemoryEntry]:
+    def retrieve(self, entry_id: str) -> MemoryEntry | None:
         """Retrieve a memory entry by ID."""
         if not self._initialized:
             self.initialize()
@@ -407,7 +397,7 @@ class SQLiteMemoryBackend(MemoryBackend):
             
             return self._row_to_entry(row)
     
-    def search(self, query: str, filters: Optional[dict[str, Any]] = None) -> list[MemoryEntry]:
+    def search(self, query: str, filters: dict[str, Any] | None = None) -> list[MemoryEntry]:
         """Search for memory entries."""
         if not self._initialized:
             self.initialize()
@@ -500,7 +490,7 @@ class SQLiteMemoryBackend(MemoryBackend):
             conn.commit()
             return cursor.rowcount > 0
     
-    def get_summary(self, filters: Optional[dict[str, Any]] = None) -> MemorySummary:
+    def get_summary(self, filters: dict[str, Any] | None = None) -> MemorySummary:
         """Get memory summary."""
         if not self._initialized:
             self.initialize()
@@ -559,7 +549,7 @@ class SQLiteMemoryBackend(MemoryBackend):
                 newest_entry=newest
             )
     
-    def cleanup(self, older_than: Optional[datetime] = None) -> int:
+    def cleanup(self, older_than: datetime | None = None) -> int:
         """Clean up old entries."""
         if not self._initialized:
             self.initialize()
@@ -685,13 +675,13 @@ class MemoryEngine:
     This is the main interface for MA-CLI components to interact with memory.
     """
     
-    def __init__(self, backend: Optional[MemoryBackend] = None):
+    def __init__(self, backend: MemoryBackend | None = None):
         self.backend = backend or SQLiteMemoryBackend()
         self.backend.initialize()
-        self._current_session_id: Optional[str] = None
-        self._current_project_id: Optional[str] = None
+        self._current_session_id: str | None = None
+        self._current_project_id: str | None = None
     
-    def set_context(self, session_id: Optional[str] = None, project_id: Optional[str] = None) -> None:
+    def set_context(self, session_id: str | None = None, project_id: str | None = None) -> None:
         """Set the current context for memory operations."""
         self._current_session_id = session_id
         self._current_project_id = project_id
@@ -704,8 +694,8 @@ class MemoryEngine:
         self,
         role: str,
         content: str,
-        session_id: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None
+        session_id: str | None = None,
+        metadata: dict[str, Any] | None = None
     ) -> str:
         """Add a conversation message."""
         session_id = session_id or self._current_session_id
@@ -732,7 +722,7 @@ class MemoryEngine:
     
     def get_conversation(
         self,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
         limit: int = 50
     ) -> list[ConversationMessage]:
         """Get recent conversation messages."""
@@ -755,7 +745,7 @@ class MemoryEngine:
             for e in entries[-limit:]
         ]
     
-    def clear_conversation(self, session_id: Optional[str] = None) -> int:
+    def clear_conversation(self, session_id: str | None = None) -> int:
         """Clear conversation for a session."""
         session_id = session_id or self._current_session_id
         
@@ -780,8 +770,8 @@ class MemoryEngine:
         self,
         key: str,
         value: Any,
-        project_id: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None
+        project_id: str | None = None,
+        metadata: dict[str, Any] | None = None
     ) -> str:
         """Store project-specific context."""
         project_id = project_id or self._current_project_id
@@ -800,8 +790,8 @@ class MemoryEngine:
     def get_project_context(
         self,
         key: str,
-        project_id: Optional[str] = None
-    ) -> Optional[Any]:
+        project_id: str | None = None
+    ) -> Any | None:
         """Retrieve project-specific context."""
         project_id = project_id or self._current_project_id
         
@@ -818,7 +808,7 @@ class MemoryEngine:
     
     def get_all_project_context(
         self,
-        project_id: Optional[str] = None
+        project_id: str | None = None
     ) -> dict[str, Any]:
         """Get all project context."""
         project_id = project_id or self._current_project_id
@@ -839,7 +829,7 @@ class MemoryEngine:
         task_id: str,
         key: str,
         value: Any,
-        metadata: Optional[dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ) -> str:
         """Store task-specific context."""
         entry = MemoryEntry(
@@ -856,8 +846,8 @@ class MemoryEngine:
     def get_task_context(
         self,
         task_id: str,
-        key: Optional[str] = None
-    ) -> Optional[Any]:
+        key: str | None = None
+    ) -> Any | None:
         """Retrieve task-specific context."""
         filters = {"memory_type": MemoryType.TASK, "task_id": task_id}
         entries = self.backend.search("", filters)
@@ -879,9 +869,9 @@ class MemoryEngine:
         self,
         run_id: str,
         request: str,
-        plan: Optional[str] = None,
-        result: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None
+        plan: str | None = None,
+        result: str | None = None,
+        metadata: dict[str, Any] | None = None
     ) -> str:
         """Store run context."""
         entry = MemoryEntry(
@@ -900,7 +890,7 @@ class MemoryEngine:
         )
         return self.backend.store(entry)
     
-    def get_run_context(self, run_id: str) -> Optional[dict[str, Any]]:
+    def get_run_context(self, run_id: str) -> dict[str, Any] | None:
         """Retrieve run context."""
         # Search for the entry by run_id
         entries = self.backend.search("", {
@@ -928,7 +918,7 @@ class MemoryEngine:
         self,
         agent_id: str,
         state: dict[str, Any],
-        metadata: Optional[dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ) -> str:
         """Store agent state."""
         entry = MemoryEntry(
@@ -941,7 +931,7 @@ class MemoryEngine:
         )
         return self.backend.store(entry)
     
-    def get_agent_state(self, agent_id: str) -> Optional[dict[str, Any]]:
+    def get_agent_state(self, agent_id: str) -> dict[str, Any] | None:
         """Retrieve agent state."""
         entries = self.backend.search("", {
             "memory_type": MemoryType.AGENT,
@@ -961,7 +951,7 @@ class MemoryEngine:
         self,
         key: str,
         content: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
         privacy_level: str = "normal"
     ) -> str:
         """Store long-term memory."""
@@ -1007,7 +997,7 @@ class MemoryEngine:
     # Utility Methods
     # -------------------------------------------------------------------------
     
-    def get_summary(self, filters: Optional[dict[str, Any]] = None) -> MemorySummary:
+    def get_summary(self, filters: dict[str, Any] | None = None) -> MemorySummary:
         """Get memory summary."""
         return self.backend.get_summary(filters)
     
@@ -1019,7 +1009,7 @@ class MemoryEngine:
     def export_memory(
         self,
         output_path: Path,
-        filters: Optional[dict[str, Any]] = None
+        filters: dict[str, Any] | None = None
     ) -> int:
         """Export memory to JSON file."""
         entries = self.backend.search("", filters or {})
@@ -1061,11 +1051,11 @@ class SessionState:
     session_id: str
     started_at: datetime
     last_activity: datetime
-    workspace_path: Optional[str]
-    project_id: Optional[str]
+    workspace_path: str | None
+    project_id: str | None
     status: str = "active"  # active, paused, completed, failed
-    request: Optional[str] = None
-    plan: Optional[str] = None
+    request: str | None = None
+    plan: str | None = None
     tasks: list[str] = field(default_factory=list)
     completed_tasks: list[str] = field(default_factory=list)
     pending_tasks: list[str] = field(default_factory=list)
@@ -1082,15 +1072,15 @@ class SessionManager:
     Supports session creation, suspension, resumption, and listing.
     """
     
-    def __init__(self, memory_engine: Optional[MemoryEngine] = None):
+    def __init__(self, memory_engine: MemoryEngine | None = None):
         self.memory = memory_engine or MemoryEngine()
-        self._current_session: Optional[SessionState] = None
+        self._current_session: SessionState | None = None
     
     def create_session(
         self,
-        workspace_path: Optional[str] = None,
-        project_id: Optional[str] = None,
-        request: Optional[str] = None
+        workspace_path: str | None = None,
+        project_id: str | None = None,
+        request: str | None = None
     ) -> SessionState:
         """Create a new session."""
         session_id = str(uuid.uuid4())
@@ -1121,7 +1111,7 @@ class SessionManager:
         
         return state
     
-    def save_session(self, state: Optional[SessionState] = None) -> None:
+    def save_session(self, state: SessionState | None = None) -> None:
         """Save session state."""
         state = state or self._current_session
         if state is None:
@@ -1149,7 +1139,7 @@ class SessionManager:
             }
         )
     
-    def load_session(self, session_id: str) -> Optional[SessionState]:
+    def load_session(self, session_id: str) -> SessionState | None:
         """Load a session by ID."""
         run_data = self.memory.get_run_context(session_id)
         
@@ -1227,7 +1217,7 @@ class SessionManager:
             for e in entries
         ]
     
-    def resume_session(self, session_id: str) -> Optional[SessionState]:
+    def resume_session(self, session_id: str) -> SessionState | None:
         """Resume a session."""
         state = self.load_session(session_id)
         if state:
@@ -1235,7 +1225,7 @@ class SessionManager:
             self.save_session(state)
         return state
     
-    def end_session(self, session_id: Optional[str] = None, status: str = "completed") -> None:
+    def end_session(self, session_id: str | None = None, status: str = "completed") -> None:
         """End a session."""
         session_id = session_id or (self._current_session.session_id if self._current_session else None)
         if session_id is None:
@@ -1249,7 +1239,7 @@ class SessionManager:
         if self._current_session and self._current_session.session_id == session_id:
             self._current_session = None
     
-    def get_current_session(self) -> Optional[SessionState]:
+    def get_current_session(self) -> SessionState | None:
         """Get current session."""
         return self._current_session
 
@@ -1258,13 +1248,13 @@ class SessionManager:
 # Factory Functions
 # ============================================================================
 
-def create_memory_engine(db_path: Optional[Path] = None) -> MemoryEngine:
+def create_memory_engine(db_path: Path | None = None) -> MemoryEngine:
     """Create a memory engine instance."""
     backend = SQLiteMemoryBackend(db_path)
     return MemoryEngine(backend)
 
 
-def create_session_manager(memory_engine: Optional[MemoryEngine] = None) -> SessionManager:
+def create_session_manager(memory_engine: MemoryEngine | None = None) -> SessionManager:
     """Create a session manager instance."""
     return SessionManager(memory_engine)
 

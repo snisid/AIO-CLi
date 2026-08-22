@@ -6,12 +6,12 @@ This module handles permission checking, approval gates, and security policies.
 
 from __future__ import annotations
 
+import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
-from typing import Any, Callable, Optional
-import re
+from typing import Any
 
 
 class PermissionLevel(Enum):
@@ -79,18 +79,18 @@ class ApprovalRequest:
     requested_by: str
     details: dict[str, Any] = field(default_factory=dict)
     status: ApprovalStatus = ApprovalStatus.PENDING
-    responded_at: Optional[datetime] = None
-    responded_by: Optional[str] = None
-    response_reason: Optional[str] = None
+    responded_at: datetime | None = None
+    responded_by: str | None = None
+    response_reason: str | None = None
     
-    def approve(self, responder: str, reason: Optional[str] = None) -> None:
+    def approve(self, responder: str, reason: str | None = None) -> None:
         """Mark request as approved."""
         self.status = ApprovalStatus.GRANTED
         self.responded_at = datetime.utcnow()
         self.responded_by = responder
         self.response_reason = reason or "Approved"
     
-    def deny(self, responder: str, reason: Optional[str] = None) -> None:
+    def deny(self, responder: str, reason: str | None = None) -> None:
         """Mark request as denied."""
         self.status = ApprovalStatus.DENIED
         self.responded_at = datetime.utcnow()
@@ -152,7 +152,7 @@ class PermissionPolicy:
             if cmd not in self.dangerous_commands:
                 self.dangerous_commands.append(cmd)
     
-    def get_rule(self, action: str) -> Optional[PermissionRule]:
+    def get_rule(self, action: str) -> PermissionRule | None:
         """Get rule for an action."""
         for rule in self.rules:
             if rule.action == action:
@@ -162,8 +162,8 @@ class PermissionPolicy:
     def check_permission(
         self,
         action: str,
-        path: Optional[str] = None,
-        command: Optional[str] = None
+        path: str | None = None,
+        command: str | None = None
     ) -> tuple[bool, PermissionLevel, bool]:
         """
         Check permission for an action.
@@ -230,7 +230,7 @@ class PermissionEngine:
     Permission checking and approval management engine.
     """
     
-    def __init__(self, policy: Optional[PermissionPolicy] = None):
+    def __init__(self, policy: PermissionPolicy | None = None):
         self.policy = policy or PermissionPolicy(name="default")
         self._pending_approvals: dict[str, ApprovalRequest] = {}
         self._approval_callbacks: list[Callable[[ApprovalRequest], None]] = []
@@ -243,8 +243,8 @@ class PermissionEngine:
     def check(
         self,
         action: str,
-        path: Optional[str] = None,
-        command: Optional[str] = None
+        path: str | None = None,
+        command: str | None = None
     ) -> tuple[bool, PermissionLevel, bool]:
         """
         Check if an action is permitted.
@@ -267,7 +267,7 @@ class PermissionEngine:
         self,
         action: str,
         description: str,
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         requested_by: str = "system"
     ) -> ApprovalRequest:
         """
@@ -317,7 +317,7 @@ class PermissionEngine:
         
         return self.policy.default_level
     
-    def approve(self, request_id: str, responder: str, reason: Optional[str] = None) -> bool:
+    def approve(self, request_id: str, responder: str, reason: str | None = None) -> bool:
         """Approve a pending request."""
         request = self._pending_approvals.get(request_id)
         if not request:
@@ -326,7 +326,7 @@ class PermissionEngine:
         request.approve(responder, reason)
         return True
     
-    def deny(self, request_id: str, responder: str, reason: Optional[str] = None) -> bool:
+    def deny(self, request_id: str, responder: str, reason: str | None = None) -> bool:
         """Deny a pending request."""
         request = self._pending_approvals.get(request_id)
         if not request:
@@ -339,7 +339,7 @@ class PermissionEngine:
         """Get all pending approval requests."""
         return list(self._pending_approvals.values())
     
-    def get_approval_status(self, request_id: str) -> Optional[ApprovalStatus]:
+    def get_approval_status(self, request_id: str) -> ApprovalStatus | None:
         """Get status of an approval request."""
         request = self._pending_approvals.get(request_id)
         if request:
@@ -424,7 +424,7 @@ def get_default_policy(name: str = "standard") -> PermissionPolicy:
 
 
 # Global permission engine instance
-_permission_engine: Optional[PermissionEngine] = None
+_permission_engine: PermissionEngine | None = None
 
 
 def get_permission_engine(policy_name: str = "standard") -> PermissionEngine:

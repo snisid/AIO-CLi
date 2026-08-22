@@ -9,19 +9,18 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import contextmanager
-from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ..core.models import (
+    AgentStatus,
+    AutonomyLevel,
+    Event,
+    HealthStatus,
     State,
     Task,
     TaskStatus,
-    AgentStatus,
-    HealthStatus,
-    AutonomyLevel,
-    Event,
 )
 
 
@@ -33,14 +32,14 @@ class StateManager:
     tasks, sessions, and execution history.
     """
     
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         if db_path is None:
             # Default to ~/.ma-cli/state/ma_cli.db
             db_path = Path.home() / ".ma-cli" / "state" / "ma_cli.db"
         
         self.db_path = db_path
         self._ensure_db_exists()
-        self._current_session_id: Optional[str] = None
+        self._current_session_id: str | None = None
     
     def _ensure_db_exists(self) -> None:
         """Ensure database file and tables exist."""
@@ -138,7 +137,7 @@ class StateManager:
         finally:
             conn.close()
     
-    def start_session(self, workspace_path: Optional[str] = None) -> str:
+    def start_session(self, workspace_path: str | None = None) -> str:
         """
         Start a new session.
         
@@ -164,7 +163,7 @@ class StateManager:
         self._current_session_id = session_id
         return session_id
     
-    def get_current_session_id(self) -> Optional[str]:
+    def get_current_session_id(self) -> str | None:
         """Get current session ID."""
         return self._current_session_id
     
@@ -172,7 +171,7 @@ class StateManager:
         """Set current session ID."""
         self._current_session_id = session_id
     
-    def load_state(self, session_id: Optional[str] = None) -> State:
+    def load_state(self, session_id: str | None = None) -> State:
         """
         Load state for a session.
         
@@ -255,7 +254,7 @@ class StateManager:
             
             conn.commit()
     
-    def save_task(self, task: Task, session_id: Optional[str] = None) -> None:
+    def save_task(self, task: Task, session_id: str | None = None) -> None:
         """Save a task to the database."""
         session_id = session_id or self._current_session_id
         
@@ -282,7 +281,7 @@ class StateManager:
             ))
             conn.commit()
     
-    def get_task(self, task_id: str) -> Optional[Task]:
+    def get_task(self, task_id: str) -> Task | None:
         """Get a task by ID."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -312,7 +311,7 @@ class StateManager:
                 dependencies=json.loads(row["dependencies"]) if row["dependencies"] else []
             )
     
-    def get_tasks_by_status(self, status: TaskStatus, session_id: Optional[str] = None) -> list[Task]:
+    def get_tasks_by_status(self, status: TaskStatus, session_id: str | None = None) -> list[Task]:
         """Get all tasks with a specific status."""
         session_id = session_id or self._current_session_id
         
@@ -347,7 +346,7 @@ class StateManager:
             
             return tasks
     
-    def record_event(self, event: Event, session_id: Optional[str] = None) -> None:
+    def record_event(self, event: Event, session_id: str | None = None) -> None:
         """Record an event to the database."""
         session_id = session_id or self._current_session_id
         
@@ -366,7 +365,7 @@ class StateManager:
             ))
             conn.commit()
     
-    def get_events(self, session_id: Optional[str] = None, limit: int = 100) -> list[Event]:
+    def get_events(self, session_id: str | None = None, limit: int = 100) -> list[Event]:
         """Get recent events."""
         session_id = session_id or self._current_session_id
         
@@ -394,7 +393,7 @@ class StateManager:
             
             return events
     
-    def end_session(self, session_id: Optional[str] = None) -> None:
+    def end_session(self, session_id: str | None = None) -> None:
         """End a session."""
         session_id = session_id or self._current_session_id
         
@@ -421,7 +420,7 @@ class StateManager:
             
             return [dict(row) for row in cursor.fetchall()]
     
-    def resume_last_session(self) -> Optional[str]:
+    def resume_last_session(self) -> str | None:
         """Resume the last active session."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -487,10 +486,10 @@ class StateManager:
 from ..core.models import EventType
 
 # Global state manager instance
-_state_manager: Optional[StateManager] = None
+_state_manager: StateManager | None = None
 
 
-def get_state_manager(db_path: Optional[Path] = None) -> StateManager:
+def get_state_manager(db_path: Path | None = None) -> StateManager:
     """Get global state manager instance."""
     global _state_manager
     if _state_manager is None or (db_path and _state_manager.db_path != db_path):

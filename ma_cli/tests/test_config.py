@@ -1,17 +1,17 @@
 """Tests for configuration engine."""
 
-import pytest
 import tempfile
 from pathlib import Path
-import yaml
+
+import pytest
 
 from ma_cli.config.engine import (
-    ConfigurationEngine,
     Config,
-    ProviderConfig,
-    ModelAlias,
-    RuntimeConfig,
+    ConfigurationEngine,
     ConfigurationError,
+    ModelAlias,
+    ProviderConfig,
+    RuntimeConfig,
 )
 from ma_cli.core.models import AutonomyLevel
 

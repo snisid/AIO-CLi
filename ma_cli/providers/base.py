@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Optional
-from datetime import datetime
+from typing import Any
 
 from ..core.models import HealthStatus
 
@@ -41,8 +40,8 @@ class ChatMessage:
     """A message in a chat conversation."""
     role: str  # 'system', 'user', 'assistant'
     content: str
-    tool_calls: Optional[list[dict[str, Any]]] = None
-    tool_call_id: Optional[str] = None
+    tool_calls: list[dict[str, Any]] | None = None
+    tool_call_id: str | None = None
 
 
 @dataclass
@@ -88,25 +87,21 @@ class Provider(ABC):
     @abstractmethod
     def name(self) -> str:
         """Unique provider identifier."""
-        pass
     
     @property
     @abstractmethod
     def type(self) -> str:
         """Provider type (e.g., 'openai-compatible', 'anthropic')."""
-        pass
     
     @property
     @abstractmethod
     def base_url(self) -> str:
         """API base URL."""
-        pass
     
     @property
     @abstractmethod
     def enabled(self) -> bool:
         """Whether provider is enabled."""
-        pass
     
     @property
     def circuit_breaker(self):
@@ -121,7 +116,6 @@ class Provider(ABC):
         Returns:
             List of available models
         """
-        pass
     
     @abstractmethod
     async def chat(
@@ -141,7 +135,6 @@ class Provider(ABC):
         Returns:
             ChatResponse with model output
         """
-        pass
     
     @abstractmethod
     async def health_check(self) -> HealthStatus:
@@ -151,7 +144,6 @@ class Provider(ABC):
         Returns:
             Current health status
         """
-        pass
     
     async def safe_chat(
         self,
@@ -191,7 +183,7 @@ class ProviderConfig:
     type: str
     enabled: bool = True
     base_url: str = ""
-    api_key: Optional[str] = None
+    api_key: str | None = None
     timeout: int = 60
     retry_count: int = 3
     headers: dict[str, str] = None

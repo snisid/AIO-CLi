@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -23,8 +23,8 @@ class WorkspaceInfo:
     name: str
     path: Path
     created_at: datetime = field(default_factory=datetime.utcnow)
-    task_id: Optional[str] = None
-    branch: Optional[str] = None
+    task_id: str | None = None
+    branch: str | None = None
     is_isolated: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -43,7 +43,7 @@ class FileLockManager:
     Manages file locks to prevent concurrent modification conflicts.
     """
     
-    def __init__(self, lock_dir: Optional[Path] = None):
+    def __init__(self, lock_dir: Path | None = None):
         if lock_dir is None:
             lock_dir = Path.home() / ".ma-cli" / "locks"
         
@@ -115,10 +115,10 @@ class FileLockManager:
             fcntl.flock(test_file.fileno(), fcntl.LOCK_UN)
             test_file.close()
             return False
-        except (IOError, OSError):
+        except OSError:
             return True
     
-    def get_lock_info(self, path: Path) -> Optional[FileLock]:
+    def get_lock_info(self, path: Path) -> FileLock | None:
         """Get information about a lock."""
         lock_path = self._get_lock_path(path)
         if not lock_path.exists():
@@ -161,21 +161,21 @@ class WorkspaceManager:
     Provides workspace creation, switching, and cleanup functionality.
     """
     
-    def __init__(self, base_path: Optional[Path] = None):
+    def __init__(self, base_path: Path | None = None):
         if base_path is None:
             base_path = Path.home() / ".ma-cli" / "workspaces"
         
         self.base_path = base_path
         self.base_path.mkdir(parents=True, exist_ok=True)
         self.lock_manager = FileLockManager()
-        self._current_workspace: Optional[WorkspaceInfo] = None
+        self._current_workspace: WorkspaceInfo | None = None
         self._workspaces: dict[str, WorkspaceInfo] = {}
     
     def create_workspace(
         self,
-        name: Optional[str] = None,
-        task_id: Optional[str] = None,
-        source_path: Optional[Path] = None,
+        name: str | None = None,
+        task_id: str | None = None,
+        source_path: Path | None = None,
         isolated: bool = True
     ) -> WorkspaceInfo:
         """
@@ -219,7 +219,7 @@ class WorkspaceManager:
         self._workspaces[name] = workspace
         return workspace
     
-    def get_workspace(self, name: str) -> Optional[WorkspaceInfo]:
+    def get_workspace(self, name: str) -> WorkspaceInfo | None:
         """Get workspace by name."""
         return self._workspaces.get(name)
     
@@ -262,7 +262,7 @@ class WorkspaceManager:
             self._current_workspace = old_workspace
     
     @property
-    def current_workspace(self) -> Optional[WorkspaceInfo]:
+    def current_workspace(self) -> WorkspaceInfo | None:
         """Get current workspace."""
         return self._current_workspace
     
@@ -354,10 +354,10 @@ class WorkspaceManager:
 
 
 # Global workspace manager instance
-_workspace_manager: Optional[WorkspaceManager] = None
+_workspace_manager: WorkspaceManager | None = None
 
 
-def get_workspace_manager(base_path: Optional[Path] = None) -> WorkspaceManager:
+def get_workspace_manager(base_path: Path | None = None) -> WorkspaceManager:
     """Get global workspace manager instance."""
     global _workspace_manager
     if _workspace_manager is None or (base_path and _workspace_manager.base_path != base_path):

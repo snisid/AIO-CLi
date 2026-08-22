@@ -1,13 +1,13 @@
 """Validation module for MA-CLI."""
 
 from .engine import (
-    ValidationEngine,
     Finalizer,
     ValidationConfig,
+    ValidationEngine,
 )
 
 __all__ = [
-    "ValidationEngine",
     "Finalizer",
     "ValidationConfig",
+    "ValidationEngine",
 ]

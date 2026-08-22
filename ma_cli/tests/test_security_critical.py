@@ -9,30 +9,30 @@ Tests cover:
 """
 
 import asyncio
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-from ma_cli.sandbox.manager import (
-    SandboxManager,
-    SandboxConfig,
-    SandboxPolicy,
-    SandboxUnavailableError,
-    PolicyViolationError,
-)
+import pytest
+
+from ma_cli.core.models import ReviewResult, ValidationReport
 from ma_cli.providers.circuit_breaker import (
     CircuitBreaker,
-    CircuitConfig,
-    CircuitState,
-    CircuitOpenError,
     CircuitBreakerRegistry,
+    CircuitConfig,
+    CircuitOpenError,
+    CircuitState,
+)
+from ma_cli.sandbox.manager import (
+    PolicyViolationError,
+    SandboxConfig,
+    SandboxManager,
+    SandboxPolicy,
+    SandboxUnavailableError,
 )
 from ma_cli.validation.engine import (
-    ValidationEngine,
     Finalizer,
     ValidationConfig,
+    ValidationEngine,
 )
-from ma_cli.core.models import ReviewResult, ValidationReport
-
 
 # ============================================================================
 # Sandbox Tests - Hard Fail Policy

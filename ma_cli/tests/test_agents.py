@@ -1,15 +1,15 @@
 """Tests for agent interface."""
 
+
 import pytest
-import asyncio
 
 from ma_cli.agents.base import Agent, AgentInfo
 from ma_cli.core.models import (
-    Task,
     AgentStatus,
-    HealthStatus,
     ExecutionResult,
+    HealthStatus,
     ReviewResult,
+    Task,
 )
 
 
