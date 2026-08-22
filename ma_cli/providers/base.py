@@ -68,7 +68,21 @@ class Provider(ABC):
     
     All model providers (Ollama, OmniRoute, Anthropic, etc.) must implement
     this interface to be used by MA-CLI.
+    
+    Uses circuit breaker pattern for resilience.
     """
+    
+    def __init__(self):
+        from .circuit_breaker import CircuitBreaker, CircuitConfig
+        
+        self._circuit_breaker = CircuitBreaker(
+            name=f"provider_{self.name}",
+            config=CircuitConfig(
+                failure_threshold=5,
+                success_threshold=3,
+                timeout_seconds=60
+            )
+        )
     
     @property
     @abstractmethod
@@ -93,6 +107,11 @@ class Provider(ABC):
     def enabled(self) -> bool:
         """Whether provider is enabled."""
         pass
+    
+    @property
+    def circuit_breaker(self):
+        """Get the circuit breaker for this provider."""
+        return self._circuit_breaker
     
     @abstractmethod
     async def discover_models(self) -> list[ModelInfo]:
@@ -134,13 +153,34 @@ class Provider(ABC):
         """
         pass
     
+    async def safe_chat(
+        self,
+        messages: list[ChatMessage],
+        model: str,
+        **kwargs: Any
+    ) -> ChatResponse:
+        """
+        Send chat request through circuit breaker.
+        
+        This method wraps the chat call with circuit breaker protection.
+        Raises CircuitOpenError if the circuit is open.
+        """
+        return await self._circuit_breaker.call_async(
+            self.chat,
+            messages,
+            model,
+            **kwargs
+        )
+    
     def get_info(self) -> dict[str, Any]:
-        """Get provider information."""
+        """Get provider information including circuit status."""
         return {
             "name": self.name,
             "type": self.type,
             "base_url": self.base_url,
-            "enabled": self.enabled
+            "enabled": self.enabled,
+            "circuit_state": self._circuit_breaker.state.value,
+            "circuit_stats": self._circuit_breaker.stats.failure_rate
         }
 
 

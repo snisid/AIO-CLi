@@ -277,6 +277,64 @@ class ReviewResult:
     score: float = 0.0  # 0.0 to 1.0
     severity: str = "info"  # info, warning, error, critical
     details: dict[str, Any] = field(default_factory=dict)
+    skipped: bool = False  # True if review was skipped (timeout/unavailable)
+
+
+@dataclass
+class ValidationReport:
+    """Comprehensive validation report for finalization."""
+    
+    task_id: str
+    tests_passed: bool = False
+    code_review_passed: bool = False
+    security_review_passed: bool = False
+    build_passed: bool = False
+    reviews_skipped: bool = False  # Critical: were any reviews skipped?
+    skipped_reviews: list[str] = field(default_factory=list)
+    
+    # Overall status
+    status: str = "PENDING"  # PENDING, SUCCESS, FAILED, REQUIRES_HUMAN
+    
+    # Details
+    test_results: Optional[dict[str, Any]] = None
+    code_review_results: list[ReviewResult] = field(default_factory=list)
+    security_review_results: list[ReviewResult] = field(default_factory=list)
+    build_output: Optional[str] = None
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    
+    def can_finalize(self) -> bool:
+        """
+        Determine if task can be finalized.
+        
+        CRITICAL: Returns False if any required reviews were skipped.
+        This enforces the quality gate - no silent skips allowed.
+        """
+        # Hard block: if reviews were skipped, cannot finalize
+        if self.reviews_skipped:
+            return False
+        
+        # All gates must pass
+        if not self.tests_passed:
+            return False
+        if not self.code_review_passed:
+            return False
+        if not self.security_review_passed:
+            return False
+        
+        return True
+    
+    def get_block_reason(self) -> Optional[str]:
+        """Get reason why finalization is blocked."""
+        if self.reviews_skipped:
+            return f"Reviews were skipped: {', '.join(self.skipped_reviews)}. Quality gate violated."
+        if not self.tests_passed:
+            return "Tests did not pass"
+        if not self.code_review_passed:
+            return "Code review did not pass"
+        if not self.security_review_passed:
+            return "Security review did not pass"
+        return None
 
 
 @dataclass
