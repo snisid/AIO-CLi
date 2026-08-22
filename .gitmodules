@@ -1,0 +1,21 @@
+[submodule "external/gstack"]
+	path = external/gstack
+	url = https://github.com/garrytan/gstack.git
+[submodule "external/claude-mem"]
+	path = external/claude-mem
+	url = https://github.com/thedotmack/claude-mem.git
+[submodule "external/security-review"]
+	path = external/security-review
+	url = https://github.com/Piebald-AI/claude-code-system-prompts.git
+[submodule "external/code-review"]
+	path = external/code-review
+	url = https://github.com/Imbad0202/academic-research-skills.git
+[submodule "external/frontend-design"]
+	path = external/frontend-design
+	url = https://github.com/Wholiver/swiftui-design-skill.git
+[submodule "external/superpowers"]
+	path = external/superpowers
+	url = https://github.com/obra/superpowers.git
+[submodule "external/composio"]
+	path = external/composio
+	url = https://github.com/ComposioHQ/composio.git
