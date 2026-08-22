@@ -6,14 +6,14 @@ This module provides process monitoring, health checking, and status tracking.
 
 from __future__ import annotations
 
-import asyncio
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 
 class ProcessStatus(Enum):
@@ -38,13 +38,13 @@ class ProcessInfo:
     name: str
     command: list[str]
     status: ProcessStatus = ProcessStatus.IDLE
-    pid: Optional[int] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    exit_code: Optional[int] = None
+    pid: int | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    exit_code: int | None = None
     stdout: str = ""
     stderr: str = ""
-    error: Optional[str] = None
+    error: str | None = None
     timeout_seconds: int = 300
     metadata: dict[str, Any] = field(default_factory=dict)
     
@@ -94,7 +94,7 @@ class Supervisor:
         }
         self._health_history: list[SystemHealth] = []
         self._monitoring = False
-        self._monitor_thread: Optional[threading.Thread] = None
+        self._monitor_thread: threading.Thread | None = None
     
     def register_process(
         self,
@@ -102,7 +102,7 @@ class Supervisor:
         name: str,
         command: list[str],
         timeout_seconds: int = 300,
-        metadata: Optional[dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ) -> ProcessInfo:
         """
         Register a process for monitoring.
@@ -255,7 +255,7 @@ class Supervisor:
         except Exception:
             return False
     
-    def get_process(self, process_id: str) -> Optional[ProcessInfo]:
+    def get_process(self, process_id: str) -> ProcessInfo | None:
         """Get process information by ID."""
         return self._processes.get(process_id)
     
@@ -310,7 +310,6 @@ class Supervisor:
         
         # Try to get system metrics (best effort)
         try:
-            import os
             
             # Memory usage
             try:
@@ -366,7 +365,7 @@ class Supervisor:
 
 
 # Global supervisor instance
-_supervisor: Optional[Supervisor] = None
+_supervisor: Supervisor | None = None
 
 
 def get_supervisor() -> Supervisor:

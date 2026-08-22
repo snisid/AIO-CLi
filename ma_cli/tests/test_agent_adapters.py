@@ -1,29 +1,29 @@
 """Tests for external agent adapters."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-import asyncio
-from unittest.mock import patch, MagicMock, AsyncMock
 
 from ma_cli.agents.adapters import (
     AgentConfig,
-    CLIInfo,
+    AgentRegistry,
     AgentResult,
-    ExternalAgentBase,
     ClaudeAgent,
+    CLIInfo,
     CodexAgent,
+    ExternalAgentBase,
+    HermesAgent,
+    OpenClawAgent,
     QwenAgent,
     ZcodeAgent,
-    OpenClawAgent,
-    HermesAgent,
-    AgentRegistry,
     get_agent_registry,
 )
 from ma_cli.core.models import (
-    Task,
     AgentStatus,
-    HealthStatus,
     ExecutionResult,
+    HealthStatus,
     ReviewResult,
+    Task,
 )
 
 

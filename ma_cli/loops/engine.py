@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 
 class LoopStatus(Enum):
@@ -27,8 +27,8 @@ class LoopStep:
     """A step in a loop."""
     name: str
     description: str = ""
-    agent: Optional[str] = None
-    model: Optional[str] = None
+    agent: str | None = None
+    model: str | None = None
     tools: list[str] = field(default_factory=list)
     timeout_seconds: int = 300
 
@@ -91,7 +91,7 @@ class OutputConfig:
     """Output configuration for loops."""
     format: str = "text"  # 'text', 'json', 'markdown'
     save_to_file: bool = False
-    file_path: Optional[str] = None
+    file_path: str | None = None
     include_metadata: bool = True
 
 
@@ -143,7 +143,7 @@ class LoopState:
     started_at: datetime = field(default_factory=datetime.utcnow)
     last_updated: datetime = field(default_factory=datetime.utcnow)
     status: LoopStatus = LoopStatus.PENDING
-    error: Optional[str] = None
+    error: str | None = None
     
     def update_activity(self) -> None:
         """Update last activity timestamp."""
@@ -177,7 +177,7 @@ class LoopEngine:
         """Register a loop definition."""
         self._loops[loop.name] = loop
     
-    def get(self, name: str) -> Optional[Loop]:
+    def get(self, name: str) -> Loop | None:
         """Get a loop by name."""
         return self._loops.get(name)
     
@@ -189,7 +189,7 @@ class LoopEngine:
         self,
         loop_name: str,
         inputs: dict[str, Any],
-        context: Optional[Any] = None
+        context: Any | None = None
     ) -> LoopResult:
         """
         Execute a loop with given inputs.

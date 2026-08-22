@@ -8,14 +8,13 @@ No task can be finalized without passing all required checks.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from ..core.models import (
     ReviewResult,
     ValidationReport,
-    TaskStatus,
 )
 from ..events.bus import EventBus
 
@@ -55,8 +54,8 @@ class ValidationEngine:
     
     def __init__(
         self,
-        config: Optional[ValidationConfig] = None,
-        event_bus: Optional[EventBus] = None
+        config: ValidationConfig | None = None,
+        event_bus: EventBus | None = None
     ):
         self.config = config or ValidationConfig()
         self.event_bus = event_bus
@@ -65,10 +64,10 @@ class ValidationEngine:
     async def validate_task(
         self,
         task_id: str,
-        test_results: Optional[dict[str, Any]] = None,
+        test_results: dict[str, Any] | None = None,
         code_reviews: list[ReviewResult] = None,
         security_reviews: list[ReviewResult] = None,
-        build_output: Optional[str] = None,
+        build_output: str | None = None,
         build_success: bool = True
     ) -> ValidationReport:
         """
@@ -147,7 +146,7 @@ class ValidationEngine:
         
         return report
     
-    def _evaluate_tests(self, test_results: Optional[dict[str, Any]]) -> bool:
+    def _evaluate_tests(self, test_results: dict[str, Any] | None) -> bool:
         """Evaluate test results."""
         if not self.config.require_tests:
             return True
@@ -262,7 +261,7 @@ class Finalizer:
     def __init__(
         self,
         validation_engine: ValidationEngine,
-        event_bus: Optional[EventBus] = None
+        event_bus: EventBus | None = None
     ):
         self.validation_engine = validation_engine
         self.event_bus = event_bus
@@ -271,7 +270,7 @@ class Finalizer:
     async def finalize_task(
         self,
         task_id: str,
-        validation_report: Optional[ValidationReport] = None
+        validation_report: ValidationReport | None = None
     ) -> tuple[bool, str]:
         """
         Attempt to finalize a task.

@@ -6,21 +6,21 @@ task decomposition, agent selection, model selection, tool selection,
 execution, observation, supervision, and more.
 """
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
     name="ma-cli",
-    version="0.1.0-dev",
+    version="1.0.0",
     author="MA-CLI Core Team",
     description="Multi-Agent Autonomous CLI - An independent agent orchestration platform",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(),
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",

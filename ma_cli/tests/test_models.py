@@ -1,22 +1,19 @@
 """Tests for core models."""
 
-import pytest
 from datetime import datetime
 
 from ma_cli.core.models import (
-    Task,
-    TaskStatus,
+    AutonomyLevel,
     Event,
     EventType,
-    State,
-    AutonomyLevel,
-    AgentStatus,
-    HealthStatus,
+    ExecutionResult,
     Permission,
     PermissionLevel,
     PermissionPolicy,
-    ExecutionResult,
     ReviewResult,
+    State,
+    Task,
+    TaskStatus,
 )
 
 

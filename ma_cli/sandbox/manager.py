@@ -8,20 +8,17 @@ CRITICAL: Hard-fail policy - never fallback to host execution.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-import os
 import tempfile
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import docker  # type: ignore
 
-from ..core.models import PermissionLevel, HealthStatus
+from ..core.models import HealthStatus
 from ..events.bus import EventBus
 from ..security.permission_engine import PermissionEngine
 
@@ -62,20 +59,18 @@ class SandboxResult:
     stdout: str
     stderr: str
     duration_ms: int
-    container_id: Optional[str] = None
-    error: Optional[str] = None
+    container_id: str | None = None
+    error: str | None = None
     policy_violation: bool = False
-    violation_details: Optional[str] = None
+    violation_details: str | None = None
 
 
 class SandboxUnavailableError(Exception):
     """Raised when sandbox cannot be established."""
-    pass
 
 
 class PolicyViolationError(Exception):
     """Raised when a command violates sandbox policy."""
-    pass
 
 
 class SandboxManager:
@@ -91,14 +86,14 @@ class SandboxManager:
     
     def __init__(
         self,
-        config: Optional[SandboxConfig] = None,
-        permission_engine: Optional[PermissionEngine] = None,
-        event_bus: Optional[EventBus] = None
+        config: SandboxConfig | None = None,
+        permission_engine: PermissionEngine | None = None,
+        event_bus: EventBus | None = None
     ):
         self.config = config or SandboxConfig()
         self.permission_engine = permission_engine
         self.event_bus = event_bus
-        self._docker_client: Optional[docker.DockerClient] = None
+        self._docker_client: docker.DockerClient | None = None
         self._active_containers: dict[str, Any] = {}
         self._workspace_roots: dict[str, Path] = {}
         
@@ -197,7 +192,7 @@ class SandboxManager:
         self,
         workspace_path: Path,
         command: str,
-        network_hosts: Optional[list[str]] = None
+        network_hosts: list[str] | None = None
     ) -> dict[str, Any]:
         """Build Docker run arguments with security constraints."""
         
@@ -262,8 +257,8 @@ class SandboxManager:
         self,
         task_id: str,
         command: str,
-        workspace_path: Optional[Path] = None,
-        timeout: Optional[int] = None
+        workspace_path: Path | None = None,
+        timeout: int | None = None
     ) -> SandboxResult:
         """
         Execute command in sandboxed environment.

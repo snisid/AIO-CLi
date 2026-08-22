@@ -11,20 +11,17 @@ The Model Router is responsible for:
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
 from enum import Enum
+from typing import Any
 
-from ..core.models import HealthStatus
+from ..config.engine import Config, ConfigurationEngine
 from ..providers import (
-    Provider,
     ModelInfo,
-    ProviderRegistry,
+    Provider,
     get_provider_registry,
 )
-from ..config.engine import ConfigurationEngine, Config
 
 
 class RoutingStrategy(Enum):
@@ -41,24 +38,24 @@ class ModelAlias:
     """Configuration for a model alias."""
     alias: str
     provider: str
-    model_id: Optional[str] = None  # None means auto-discover
+    model_id: str | None = None  # None means auto-discover
     fallback: list[str] = field(default_factory=list)
     capabilities_required: list[str] = field(default_factory=list)
     max_cost_per_token: float = 0.0
     privacy_required: bool = False
     status: str = "unknown"  # available, unavailable, unknown
-    discovered_model_id: Optional[str] = None
+    discovered_model_id: str | None = None
 
 
 @dataclass
 class ModelSelectionResult:
     """Result of model selection."""
     success: bool
-    selected_model: Optional[ModelInfo] = None
-    alias_used: Optional[str] = None
-    provider_used: Optional[str] = None
+    selected_model: ModelInfo | None = None
+    alias_used: str | None = None
+    provider_used: str | None = None
     fallback_chain: list[str] = field(default_factory=list)
-    error: Optional[str] = None
+    error: str | None = None
     latency_ms: float = 0.0
 
 
@@ -74,9 +71,9 @@ class ModelRouter:
     - Policy enforcement
     """
     
-    _instance: Optional["ModelRouter"] = None
+    _instance: ModelRouter | None = None
     
-    def __new__(cls) -> "ModelRouter":
+    def __new__(cls) -> ModelRouter:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
@@ -86,7 +83,7 @@ class ModelRouter:
             cls._instance._discovery_cache_ttl = 300  # 5 minutes
         return cls._instance
     
-    def initialize(self, config: Optional[Config] = None) -> None:
+    def initialize(self, config: Config | None = None) -> None:
         """Initialize router with configuration."""
         if self._initialized:
             return
@@ -144,7 +141,7 @@ class ModelRouter:
         self,
         alias: str,
         strategy: RoutingStrategy = RoutingStrategy.BALANCED,
-        required_capabilities: Optional[list[str]] = None
+        required_capabilities: list[str] | None = None
     ) -> ModelSelectionResult:
         """
         Resolve a model alias to an actual model.
@@ -240,7 +237,7 @@ class ModelRouter:
         self,
         provider_name: str,
         model_id: str,
-        required_capabilities: Optional[list[str]],
+        required_capabilities: list[str] | None,
         max_cost: float,
         privacy_required: bool
     ) -> ModelSelectionResult:
@@ -338,7 +335,7 @@ class ModelRouter:
         self,
         model_id: str,
         strategy: RoutingStrategy,
-        required_capabilities: Optional[list[str]],
+        required_capabilities: list[str] | None,
         fallback_chain: list[str]
     ) -> ModelSelectionResult:
         """Find a model by its ID across all providers."""
@@ -368,7 +365,7 @@ class ModelRouter:
         self,
         original_alias: str,
         strategy: RoutingStrategy,
-        required_capabilities: Optional[list[str]],
+        required_capabilities: list[str] | None,
         fallback_chain: list[str]
     ) -> ModelSelectionResult:
         """Apply strategy-based fallback logic."""
@@ -556,7 +553,7 @@ class ModelRouter:
         return result
 
 
-_router: Optional[ModelRouter] = None
+_router: ModelRouter | None = None
 
 
 def get_model_router() -> ModelRouter:

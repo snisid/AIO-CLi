@@ -1,17 +1,17 @@
 """Workspace module initialization."""
 
 from .manager import (
-    WorkspaceManager,
-    WorkspaceInfo,
-    FileLockManager,
     FileLock,
+    FileLockManager,
+    WorkspaceInfo,
+    WorkspaceManager,
     get_workspace_manager,
 )
 
 __all__ = [
-    "WorkspaceManager",
-    "WorkspaceInfo",
-    "FileLockManager",
     "FileLock",
+    "FileLockManager",
+    "WorkspaceInfo",
+    "WorkspaceManager",
     "get_workspace_manager",
 ]

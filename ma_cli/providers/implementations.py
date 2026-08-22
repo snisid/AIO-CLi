@@ -12,25 +12,23 @@ This module contains concrete provider implementations:
 
 from __future__ import annotations
 
-import asyncio
+import subprocess
 import time
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
-from pathlib import Path
-import subprocess
+from typing import Any
+
 import httpx
 
-from .base import Provider, ModelInfo, ChatMessage, ChatResponse, ProviderConfig
 from ..core.models import HealthStatus
+from .base import ChatMessage, ChatResponse, ModelInfo, Provider, ProviderConfig
 
 
 @dataclass
 class DiscoveredModel(ModelInfo):
     """Model info extended with discovery metadata."""
     discovered_at: datetime = field(default_factory=datetime.utcnow)
-    last_checked: Optional[datetime] = None
+    last_checked: datetime | None = None
     raw_data: dict[str, Any] = field(default_factory=dict)
 
 
@@ -50,7 +48,7 @@ class OllamaProvider(Provider):
         self._config = config
         self._base_url = config.base_url or "http://localhost:11434"
         self._models_cache: list[DiscoveredModel] = []
-        self._last_discovery: Optional[datetime] = None
+        self._last_discovery: datetime | None = None
     
     @property
     def name(self) -> str:
@@ -216,7 +214,7 @@ class OllamaProvider(Provider):
         except Exception:
             return False
     
-    def get_version(self) -> Optional[str]:
+    def get_version(self) -> str | None:
         """Get Ollama version."""
         try:
             result = subprocess.run(
@@ -252,7 +250,7 @@ class OmniRouteProvider(Provider):
         self._config = config
         self._base_url = config.base_url or self.DEFAULT_BASE_URL
         self._models_cache: list[DiscoveredModel] = []
-        self._last_discovery: Optional[datetime] = None
+        self._last_discovery: datetime | None = None
         self._routing_info: dict[str, Any] = {}
     
     @property
@@ -400,7 +398,7 @@ class OmniRouteProvider(Provider):
             except Exception:
                 return False
     
-    def get_version(self) -> Optional[str]:
+    def get_version(self) -> str | None:
         """Get OmniRoute version."""
         try:
             result = subprocess.run(
@@ -442,7 +440,7 @@ class NineRouterProvider(Provider):
         self._config = config
         self._base_url = config.base_url or self.DEFAULT_BASE_URL
         self._models_cache: list[DiscoveredModel] = []
-        self._last_discovery: Optional[datetime] = None
+        self._last_discovery: datetime | None = None
     
     @property
     def name(self) -> str:
@@ -1061,9 +1059,9 @@ class ProviderRegistry:
     Singleton pattern for global access.
     """
     
-    _instance: Optional["ProviderRegistry"] = None
+    _instance: ProviderRegistry | None = None
     
-    def __new__(cls) -> "ProviderRegistry":
+    def __new__(cls) -> ProviderRegistry:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._providers = {}
@@ -1108,7 +1106,7 @@ class ProviderRegistry:
         
         self._initialized = True
     
-    def get(self, name: str) -> Optional[Provider]:
+    def get(self, name: str) -> Provider | None:
         """Get a provider by name."""
         return self._providers.get(name)
     
@@ -1129,7 +1127,7 @@ class ProviderRegistry:
         self._providers.pop(name, None)
 
 
-_registry: Optional[ProviderRegistry] = None
+_registry: ProviderRegistry | None = None
 
 
 def get_provider_registry() -> ProviderRegistry:

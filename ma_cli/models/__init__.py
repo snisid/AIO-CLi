@@ -1,16 +1,16 @@
 """Models module initialization."""
 
 from .router import (
-    ModelRouter,
     ModelAlias,
+    ModelRouter,
     ModelSelectionResult,
     RoutingStrategy,
     get_model_router,
 )
 
 __all__ = [
-    "ModelRouter",
     "ModelAlias",
+    "ModelRouter",
     "ModelSelectionResult",
     "RoutingStrategy",
     "get_model_router",

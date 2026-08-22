@@ -18,18 +18,17 @@ from __future__ import annotations
 import asyncio
 import shutil
 import subprocess
-import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ..core.models import (
-    Task,
     AgentStatus,
-    HealthStatus,
     ExecutionResult,
+    HealthStatus,
     ReviewResult,
+    Task,
 )
 from .base import Agent, AgentInfo
 
@@ -59,9 +58,9 @@ class AgentConfig:
 class CLIInfo:
     """Information about a detected CLI."""
     exists: bool
-    path: Optional[str] = None
-    version: Optional[str] = None
-    error: Optional[str] = None
+    path: str | None = None
+    version: str | None = None
+    error: str | None = None
 
 
 @dataclass
@@ -105,13 +104,13 @@ class ExternalAgentBase(Agent):
     
     CONFIG: AgentConfig
     
-    def __init__(self, config: Optional[AgentConfig] = None):
+    def __init__(self, config: AgentConfig | None = None):
         self._config = config or self.CONFIG
         self._status = AgentStatus.OFFLINE
         self._health = HealthStatus.UNKNOWN
-        self._cli_info: Optional[CLIInfo] = None
-        self._current_process: Optional[asyncio.subprocess.Process] = None
-        self._last_check: Optional[datetime] = None
+        self._cli_info: CLIInfo | None = None
+        self._current_process: asyncio.subprocess.Process | None = None
+        self._last_check: datetime | None = None
         
     @property
     def id(self) -> str:
@@ -567,6 +566,278 @@ class HermesAgent(ExternalAgentBase):
 
 
 # ============================================================================
+# External Agents from external_agents/ Directory
+# ============================================================================
+
+class ECCExternalAgent(ExternalAgentBase):
+    """
+    Adapter for Everything Claude Code (ECC) - External Installation.
+    
+    Interfaces with the ECC CLI from external_agents/ECC directory.
+    Provides comprehensive skill set for Claude Code.
+    """
+    
+    CONFIG = AgentConfig(
+        name="ECCExternalAgent",
+        cli_command="ecc",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=900,
+        required_env_vars=["ANTHROPIC_API_KEY"],
+        capabilities=[
+            "fullstack_development", "devops", "testing",
+            "code_generation", "scaffolding", "automation",
+            "skills_execution", "memory_management"
+        ],
+        roles=["fullstack_developer", "devops_engineer", "test_engineer", "automation_specialist"]
+    )
+
+
+class OpenVikingExternalAgent(ExternalAgentBase):
+    """
+    Adapter for OpenViking - External Installation.
+    
+    Interfaces with OpenViking CLI from external_agents/OpenViking directory.
+    Provides advanced AI agent capabilities with multi-modal reasoning.
+    """
+    
+    CONFIG = AgentConfig(
+        name="OpenVikingExternalAgent",
+        cli_command="openviking",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=1200,
+        required_env_vars=["OPENVIKING_API_KEY"],
+        capabilities=[
+            "multimodal_reasoning", "tool_orchestration",
+            "long_horizon_planning", "self_reflection",
+            "distributed_agents", "workflow_automation"
+        ],
+        roles=["ai_researcher", "planning_specialist", "reasoning_engine", "workflow_orchestrator"]
+    )
+
+
+class ImpeccableExternalAgent(ExternalAgentBase):
+    """
+    Adapter for Impeccable - Code Quality Checker.
+    
+    Interfaces with Impeccable CLI from external_agents/impeccable directory.
+    Detects code antipatterns and quality issues.
+    """
+    
+    CONFIG = AgentConfig(
+        name="ImpeccableExternalAgent",
+        cli_command="impeccable",
+        version_args=["--version"],
+        execute_args=["--check"],
+        default_timeout=300,
+        required_env_vars=[],
+        capabilities=[
+            "code_quality", "antipattern_detection",
+            "static_analysis", "best_practices"
+        ],
+        roles=["code_reviewer", "quality_assurance", "static_analyst"]
+    )
+
+
+class UIUXProMaxExternalAgent(ExternalAgentBase):
+    """
+    Adapter for UI/UX Pro Max Skills - External Installation.
+    
+    Interfaces with uipro CLI from external_agents/ui-ux-pro-max-skill/cli directory.
+    Provides advanced design system capabilities.
+    """
+    
+    CONFIG = AgentConfig(
+        name="UIUXProMaxExternalAgent",
+        cli_command="uipro",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=600,
+        required_env_vars=[],
+        capabilities=[
+            "ui_design", "ux_optimization",
+            "design_systems", "accessibility",
+            "responsive_design", "animation"
+        ],
+        roles=["ui_designer", "ux_researcher", "design_system_architect"]
+    )
+
+
+class TasteSkillExternalAgent(ExternalAgentBase):
+    """
+    Adapter for Taste Skill - Design Evaluation.
+    
+    Interfaces with taste-skill scripts from external_agents/taste-skill directory.
+    Evaluates design aesthetics and color harmony.
+    """
+    
+    CONFIG = AgentConfig(
+        name="TasteSkillExternalAgent",
+        cli_command="skill.sh",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=300,
+        required_env_vars=[],
+        capabilities=[
+            "aesthetic_evaluation", "color_harmony",
+            "design_critique", "taste_curation"
+        ],
+        roles=["aesthetic_judge", "taste_curator", "design_critic"]
+    )
+    
+    async def detect_cli(self) -> CLIInfo:
+        """Override to handle shell script detection."""
+        import os
+        
+        # Check for skill.sh in taste-skill directory
+        skill_script = Path("/workspace/external_agents/taste-skill/skill.sh")
+        
+        if skill_script.exists() and os.access(skill_script, os.X_OK):
+            self._cli_info = CLIInfo(
+                exists=True,
+                path=str(skill_script),
+                version="1.0.0"
+            )
+            return self._cli_info
+        
+        # Fallback to standard detection
+        return await super().detect_cli()
+
+
+class AwesomeDesignMDAgent(ExternalAgentBase):
+    """
+    Adapter for Awesome Design MD - Design Resources Repository.
+    
+    Provides access to curated design markdown resources from external_agents/awesome-design-md.
+    This is a resource-based agent rather than a CLI agent.
+    """
+    
+    CONFIG = AgentConfig(
+        name="AwesomeDesignMDAgent",
+        cli_command="cat",  # Use cat to read markdown files
+        version_args=[],
+        execute_args=[],
+        default_timeout=60,
+        required_env_vars=[],
+        capabilities=[
+            "design_resources", "documentation",
+            "reference_materials", "design_patterns"
+        ],
+        roles=["design_librarian", "resource_curator", "documentation_specialist"]
+    )
+    
+    def __init__(self):
+        super().__init__()
+        self.resource_path = Path("/workspace/external_agents/awesome-design-md/design-md")
+    
+    async def get_design_resource(self, topic: str) -> ExecutionResult:
+        """Get design resources for a specific topic."""
+        import subprocess
+        
+        if not self.resource_path.exists():
+            return ExecutionResult(
+                success=False,
+                error="Design resources path not found"
+            )
+        
+        # Search for relevant markdown files
+        try:
+            result = subprocess.run(
+                ["find", str(self.resource_path), "-name", f"*{topic}*.md"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0 and result.stdout.strip():
+                files = result.stdout.strip().split("\n")
+                content = []
+                for f in files[:5]:  # Limit to 5 files
+                    with open(f, 'r') as file:
+                        content.append(file.read())
+                
+                return ExecutionResult(
+                    success=True,
+                    output="\n\n---\n\n".join(content)
+                )
+            
+            return ExecutionResult(
+                success=True,
+                output=f"No specific resources found for '{topic}'. Browse {self.resource_path} manually."
+            )
+        except Exception as e:
+            return ExecutionResult(
+                success=False,
+                error=str(e)
+            )
+
+
+class Img2ThreeJSAgent(ExternalAgentBase):
+    """
+    Adapter for Img2ThreeJS - Image to 3D Conversion.
+    
+    Provides image to 3D model conversion capabilities from external_agents/img2threejs.
+    """
+    
+    CONFIG = AgentConfig(
+        name="Img2ThreeJSAgent",
+        cli_command="python3",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=600,
+        required_env_vars=[],
+        capabilities=[
+            "image_to_3d", "model_generation",
+            "texture_mapping", "threejs_export"
+        ],
+        roles=["3d_artist", "model_generator", "conversion_specialist"]
+    )
+    
+    def __init__(self):
+        super().__init__()
+        self.forge_path = Path("/workspace/external_agents/img2threejs/forge")
+    
+    async def convert_image_to_3d(self, image_path: str) -> ExecutionResult:
+        """Convert an image to a 3D model."""
+        import subprocess
+        
+        if not self.forge_path.exists():
+            return ExecutionResult(
+                success=False,
+                error="Img2ThreeJS forge path not found"
+            )
+        
+        # Look for conversion scripts
+        convert_script = self.forge_path / "convert.py"
+        
+        if not convert_script.exists():
+            return ExecutionResult(
+                success=False,
+                error="Conversion script not found in forge directory"
+            )
+        
+        try:
+            result = subprocess.run(
+                ["python3", str(convert_script), "--input", image_path],
+                capture_output=True,
+                text=True,
+                timeout=600
+            )
+            
+            return ExecutionResult(
+                success=result.returncode == 0,
+                output=result.stdout,
+                error=result.stderr if result.returncode != 0 else None
+            )
+        except Exception as e:
+            return ExecutionResult(
+                success=False,
+                error=str(e)
+            )
+
+
+# ============================================================================
 # Agent Registry
 # ============================================================================
 
@@ -577,9 +848,9 @@ class AgentRegistry:
     Provides centralized access to all available agents.
     """
     
-    _instance: Optional["AgentRegistry"] = None
+    _instance: AgentRegistry | None = None
     
-    def __new__(cls) -> "AgentRegistry":
+    def __new__(cls) -> AgentRegistry:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._agents = {}
@@ -595,23 +866,66 @@ class AgentRegistry:
     
     def _register_default_agents(self) -> None:
         """Register all default agents."""
+        from .extended_agents import (
+            GStackAgent,
+            ClaudeMEMAgent,
+            SecurityReviewAgent,
+            CodeReviewAgent,
+            FrontendDesignAgent,
+            SuperPowersAgent,
+            ComposioAgent,
+            UIUXProMaxAgent,
+            ECCAgent,
+            OpenVikingAgent,
+            ImpeccableAgent,
+            PlaywrightAgent,
+            AwesomeDesignMDAgent as AwesomeDesignMDBase,
+            Img2ThreeJSAgent as Img2ThreeJSBase,
+            TasteSkillAgent as TasteSkillBase,
+        )
+        
         agents = [
+            # Base external agents
             ClaudeAgent(),
             CodexAgent(),
             QwenAgent(),
             ZcodeAgent(),
             OpenClawAgent(),
             HermesAgent(),
+            # Extended community agents (base implementations)
+            GStackAgent(),
+            ClaudeMEMAgent(),
+            SecurityReviewAgent(),
+            CodeReviewAgent(),
+            FrontendDesignAgent(),
+            SuperPowersAgent(),
+            ComposioAgent(),
+            UIUXProMaxAgent(),
+            ECCAgent(),
+            OpenVikingAgent(),
+            ImpeccableAgent(),
+            PlaywrightAgent(),
+            AwesomeDesignMDBase(),
+            Img2ThreeJSBase(),
+            TasteSkillBase(),
+            # External agents from external_agents/ directory
+            ECCExternalAgent(),
+            OpenVikingExternalAgent(),
+            ImpeccableExternalAgent(),
+            UIUXProMaxExternalAgent(),
+            TasteSkillExternalAgent(),
+            AwesomeDesignMDAgent(),
+            Img2ThreeJSAgent(),
         ]
         
         for agent in agents:
             self._agents[agent.id] = agent
     
-    def get(self, agent_id: str) -> Optional[Agent]:
+    def get(self, agent_id: str) -> Agent | None:
         """Get an agent by ID."""
         return self._agents.get(agent_id)
     
-    def get_by_name(self, name: str) -> Optional[Agent]:
+    def get_by_name(self, name: str) -> Agent | None:
         """Get an agent by name."""
         for agent in self._agents.values():
             if agent.name.lower() == name.lower():

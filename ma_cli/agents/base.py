@@ -8,14 +8,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from ..core.models import (
-    Task,
     AgentStatus,
-    HealthStatus,
     ExecutionResult,
+    HealthStatus,
     ReviewResult,
+    Task,
 )
 
 
@@ -48,43 +48,36 @@ class Agent(ABC):
     @abstractmethod
     def id(self) -> str:
         """Unique agent identifier."""
-        pass
     
     @property
     @abstractmethod
     def name(self) -> str:
         """Human-readable agent name."""
-        pass
     
     @property
     @abstractmethod
     def provider(self) -> str:
         """Provider this agent uses (e.g., 'anthropic', 'openai', 'ollama')."""
-        pass
     
     @property
     @abstractmethod
     def capabilities(self) -> list[str]:
         """List of agent capabilities (e.g., 'coding', 'reasoning', 'tool_use')."""
-        pass
     
     @property
     @abstractmethod
     def roles(self) -> list[str]:
         """Roles this agent can perform (e.g., 'developer', 'reviewer', 'planner')."""
-        pass
     
     @property
     @abstractmethod
     def status(self) -> AgentStatus:
         """Current agent status."""
-        pass
     
     @property
     @abstractmethod
     def health(self) -> HealthStatus:
         """Agent health status."""
-        pass
     
     @abstractmethod
     async def execute(self, task: Task) -> ExecutionResult:
@@ -97,7 +90,6 @@ class Agent(ABC):
         Returns:
             ExecutionResult with success status and output
         """
-        pass
     
     @abstractmethod
     async def cancel(self) -> bool:
@@ -107,7 +99,6 @@ class Agent(ABC):
         Returns:
             True if cancellation was successful
         """
-        pass
     
     @abstractmethod
     async def inspect(self) -> dict[str, Any]:
@@ -117,7 +108,6 @@ class Agent(ABC):
         Returns:
             Dictionary with agent state and diagnostic information
         """
-        pass
     
     @abstractmethod
     async def review(self, code: str) -> ReviewResult:
@@ -130,7 +120,6 @@ class Agent(ABC):
         Returns:
             ReviewResult with issues and suggestions
         """
-        pass
     
     @abstractmethod
     async def report(self) -> dict[str, Any]:
@@ -140,7 +129,6 @@ class Agent(ABC):
         Returns:
             Dictionary with activity metrics and status
         """
-        pass
     
     async def health_check(self) -> HealthStatus:
         """
