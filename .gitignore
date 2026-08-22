@@ -25,15 +25,18 @@ wheels/
 .coverage
 coverage/
 htmlcov/
-.nosetests
+.nox/
+.tox/
+.coverage.*
+.cache
 .pytest_cache/
+.hypothesis/
 
-# Environment
-.env
-.venv/
+# Virtual environments
 venv/
-env/
 ENV/
+env.bak/
+.venv/
 
 # IDE
 .vscode/
@@ -42,10 +45,20 @@ ENV/
 *.swo
 *.tmp
 
+# Environment variables
+.env
+.env.local
+*.env.*
+
 # OS
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
+
+# Build artifacts
+target/
+.gradle/
+.mypy_cache/
 ```
