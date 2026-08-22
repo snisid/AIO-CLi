@@ -9,6 +9,14 @@ This module extends the base adapters with integrations for:
 - Frontend Design skills (Wholiver/swiftui-design-skill)
 - SuperPowers capabilities (obra/superpowers)
 - Composio plugin integration (ComposioHQ/composio)
+- UI/UX Pro Max skills (nextlevelbuilder/ui-ux-pro-max-skill)
+- Everything Claude Code ECC (affaan-m/ECC)
+- OpenViking AI agent (volcengine/OpenViking)
+- Impeccable code quality (pbakaus/impeccable)
+- Playwright CLI testing (microsoft/playwright-cli)
+- Awesome Design MD resources (VoltAgent/awesome-design-md)
+- Img2ThreeJS 3D conversion (img2threejs/img2threejs)
+- Taste Skill evaluation (Leonxlnx/taste-skill)
 """
 
 from __future__ import annotations
@@ -810,3 +818,572 @@ def get_extended_agent(agent_type: str, **kwargs) -> Optional[Agent]:
     except Exception:
         # Return instance with default parameters
         return agent_class()
+
+
+# ============================================================================
+# New Extended Agents from Community Repositories
+# ============================================================================
+
+class UIUXProMaxAgent(ExternalAgentBase):
+    """
+    Adapter for UI/UX Pro Max Skills - Advanced Design System.
+    
+    Provides professional-grade UI/UX design capabilities:
+    - Advanced design patterns
+    - User experience optimization
+    - Design system architecture
+    - Accessibility compliance (WCAG 2.1+)
+    - Responsive design principles
+    """
+    
+    CONFIG = AgentConfig(
+        name="UIUXProMaxAgent",
+        cli_command="claude",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=600,
+        required_env_vars=["ANTHROPIC_API_KEY"],
+        capabilities=[
+            "ui_design", "ux_optimization", "design_systems",
+            "accessibility_audit", "responsive_design", "user_research"
+        ],
+        roles=["ui_designer", "ux_researcher", "design_architect", "accessibility_specialist"]
+    )
+    
+    def __init__(self, skills_path: Optional[Path] = None):
+        super().__init__()
+        self.skills_path = skills_path or self._find_uiux_skills()
+        
+    def _find_uiux_skills(self) -> Optional[Path]:
+        """Find UI/UX Pro Max skills directory."""
+        candidates = [
+            Path("/workspace/external/ui-ux-pro-max-skill"),
+            Path.home() / ".claude" / "skills" / "ui-ux-pro-max-skill",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+    
+    async def design_system_review(self, components: list[str]) -> ReviewResult:
+        """Review design system components."""
+        task = Task(
+            title="Design System Review",
+            description=f"Review design system components: {', '.join(components)}",
+            assigned_role="design_architect"
+        )
+        
+        result = await self.execute(task)
+        
+        if result.success:
+            return ReviewResult(
+                passed=True,
+                suggestions=[result.output] if result.output else [],
+                score=0.85
+            )
+        else:
+            return ReviewResult(
+                passed=False,
+                issues=[result.error or "Design review failed"],
+                score=0.3
+            )
+    
+    async def accessibility_audit(self, page_html: str) -> ReviewResult:
+        """Perform WCAG accessibility audit."""
+        task = Task(
+            title="WCAG Accessibility Audit",
+            description=f"Audit HTML for WCAG 2.1 compliance:\n\n```html\n{page_html[:5000]}...",  # Limit size
+            assigned_role="accessibility_specialist"
+        )
+        
+        result = await self.execute(task)
+        
+        if result.success:
+            return ReviewResult(
+                passed=True,
+                suggestions=[result.output] if result.output else [],
+                score=0.9
+            )
+        else:
+            return ReviewResult(
+                passed=False,
+                issues=[result.error or "Accessibility audit failed"],
+                score=0.4
+            )
+
+
+class ECCAgent(ExternalAgentBase):
+    """
+    Adapter for Everything Claude Code (ECC) - Comprehensive Skill Set.
+    
+    Provides extensive Claude Code capabilities:
+    - Full-stack development skills
+    - DevOps automation
+    - Testing frameworks
+    - Code generation patterns
+    - Project scaffolding
+    """
+    
+    CONFIG = AgentConfig(
+        name="ECCAgent",
+        cli_command="claude",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=900,
+        required_env_vars=["ANTHROPIC_API_KEY"],
+        capabilities=[
+            "fullstack_development", "devops", "testing",
+            "code_generation", "scaffolding", "automation"
+        ],
+        roles=["fullstack_developer", "devops_engineer", "test_engineer", "automation_specialist"]
+    )
+    
+    def __init__(self, ecc_path: Optional[Path] = None):
+        super().__init__()
+        self.ecc_path = ecc_path or self._find_ecc()
+        
+    def _find_ecc(self) -> Optional[Path]:
+        """Find ECC installation directory."""
+        candidates = [
+            Path("/workspace/external/ECC"),
+            Path.home() / ".claude" / "skills" / "ECC",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+    
+    async def scaffold_project(self, project_type: str, framework: str) -> ExecutionResult:
+        """Scaffold a new project."""
+        task = Task(
+            title=f"Scaffold {framework} Project",
+            description=f"Create a new {project_type} project using {framework} with best practices",
+            assigned_role="fullstack_developer"
+        )
+        
+        return await self.execute(task)
+    
+    async def run_devops_pipeline(self, pipeline_config: dict) -> ExecutionResult:
+        """Execute DevOps pipeline."""
+        task = Task(
+            title="DevOps Pipeline Execution",
+            description=f"Run pipeline: {json.dumps(pipeline_config)}",
+            assigned_role="devops_engineer"
+        )
+        
+        return await self.execute(task)
+
+
+class OpenVikingAgent(ExternalAgentBase):
+    """
+    Adapter for OpenViking - Volcengine AI Agent Framework.
+    
+    Provides advanced AI agent capabilities:
+    - Multi-modal reasoning
+    - Tool use orchestration
+    - Long-horizon planning
+    - Self-reflection and correction
+    """
+    
+    CONFIG = AgentConfig(
+        name="OpenVikingAgent",
+        cli_command="openviking",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=1200,
+        required_env_vars=["OPENVIKING_API_KEY"],
+        capabilities=[
+            "multimodal_reasoning", "tool_orchestration",
+            "long_horizon_planning", "self_reflection"
+        ],
+        roles=["ai_researcher", "planning_specialist", "reasoning_engine"]
+    )
+    
+    def __init__(self, viking_path: Optional[Path] = None):
+        super().__init__()
+        self.viking_path = viking_path or self._find_openviking()
+        
+    def _find_openviking(self) -> Optional[Path]:
+        """Find OpenViking installation directory."""
+        candidates = [
+            Path("/workspace/external/OpenViking"),
+            Path.home() / ".local" / "lib" / "openviking",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+    
+    async def complex_reasoning(self, problem: str, context: dict) -> ExecutionResult:
+        """Perform complex multi-step reasoning."""
+        task = Task(
+            title="Complex Reasoning Task",
+            description=f"Problem: {problem}\n\nContext: {json.dumps(context)}",
+            assigned_role="ai_researcher"
+        )
+        
+        return await self.execute(task)
+
+
+class ImpeccableAgent(ExternalAgentBase):
+    """
+    Adapter for Impeccable - Code Quality Excellence.
+    
+    Provides rigorous code quality analysis:
+    - Clean code principles
+    - SOLID design validation
+    - Performance optimization
+    - Maintainability assessment
+    - Technical debt detection
+    """
+    
+    CONFIG = AgentConfig(
+        name="ImpeccableAgent",
+        cli_command="claude",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=600,
+        required_env_vars=["ANTHROPIC_API_KEY"],
+        capabilities=[
+            "code_quality_analysis", "clean_code_validation",
+            "solid_checking", "performance_review", "debt_detection"
+        ],
+        roles=["quality_engineer", "code_architect", "performance_specialist"]
+    )
+    
+    def __init__(self, impeccable_path: Optional[Path] = None):
+        super().__init__()
+        self.impeccable_path = impeccable_path or self._find_impeccable()
+        
+    def _find_impeccable(self) -> Optional[Path]:
+        """Find Impeccable installation directory."""
+        candidates = [
+            Path("/workspace/external/impeccable"),
+            Path.home() / ".claude" / "skills" / "impeccable",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+    
+    async def quality_review(self, code: str, language: str = "python") -> ReviewResult:
+        """Perform comprehensive code quality review."""
+        task = Task(
+            title="Code Quality Review",
+            description=f"Review {language} code for quality:\n\n```{language}\n{code[:8000]}...",  # Limit size
+            assigned_role="quality_engineer"
+        )
+        
+        result = await self.execute(task)
+        
+        if result.success:
+            return ReviewResult(
+                passed=True,
+                suggestions=[result.output] if result.output else [],
+                score=0.85
+            )
+        else:
+            return ReviewResult(
+                passed=False,
+                issues=[result.error or "Quality review failed"],
+                score=0.4
+            )
+
+
+class PlaywrightAgent(ExternalAgentBase):
+    """
+    Adapter for Playwright CLI - Browser Automation Testing.
+    
+    Provides end-to-end testing capabilities:
+    - Cross-browser testing (Chromium, Firefox, WebKit)
+    - API testing
+    - Visual regression testing
+    - Network interception
+    - Mobile emulation
+    """
+    
+    CONFIG = AgentConfig(
+        name="PlaywrightAgent",
+        cli_command="playwright",
+        version_args=["--version"],
+        execute_args=["test"],
+        default_timeout=300,
+        required_env_vars=[],
+        capabilities=[
+            "e2e_testing", "browser_automation", "api_testing",
+            "visual_regression", "mobile_emulation"
+        ],
+        roles=["test_automation_engineer", "qa_specialist", "browser_tester"]
+    )
+    
+    def __init__(self, playwright_path: Optional[Path] = None):
+        super().__init__()
+        self.playwright_path = playwright_path or self._find_playwright()
+        
+    def _find_playwright(self) -> Optional[Path]:
+        """Find Playwright CLI installation."""
+        candidates = [
+            Path("/workspace/external/playwright-cli"),
+            Path("/usr/local/bin/playwright"),
+            Path.home() / ".npm" / "global" / "bin" / "playwright",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+    
+    async def run_e2e_tests(self, test_dir: Path, browser: str = "chromium") -> ExecutionResult:
+        """Run E2E tests with Playwright."""
+        task = Task(
+            title="E2E Test Execution",
+            description=f"Run Playwright tests in {test_dir} using {browser}",
+            assigned_role="test_automation_engineer"
+        )
+        
+        return await self.execute(task)
+    
+    async def visual_comparison(self, baseline: Path, current: Path) -> ReviewResult:
+        """Perform visual regression comparison."""
+        task = Task(
+            title="Visual Regression Test",
+            description=f"Compare screenshots: baseline={baseline}, current={current}",
+            assigned_role="qa_specialist"
+        )
+        
+        result = await self.execute(task)
+        
+        if result.success:
+            return ReviewResult(
+                passed=True,
+                suggestions=[result.output] if result.output else [],
+                score=1.0 if "no differences" in (result.output or "").lower() else 0.7
+            )
+        else:
+            return ReviewResult(
+                passed=False,
+                issues=[result.error or "Visual comparison failed"],
+                score=0.3
+            )
+
+
+class AwesomeDesignMDAgent(ExternalAgentBase):
+    """
+    Adapter for Awesome Design MD - Design Resource Aggregator.
+    
+    Provides access to curated design resources:
+    - Design patterns library
+    - UI component collections
+    - Design inspiration
+    - Best practices documentation
+    """
+    
+    CONFIG = AgentConfig(
+        name="AwesomeDesignMDAgent",
+        cli_command="claude",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=300,
+        required_env_vars=["ANTHROPIC_API_KEY"],
+        capabilities=[
+            "design_resource_lookup", "pattern_library",
+            "inspiration_curation", "best_practices"
+        ],
+        roles=["design_librarian", "pattern_specialist", "resource_curator"]
+    )
+    
+    def __init__(self, resources_path: Optional[Path] = None):
+        super().__init__()
+        self.resources_path = resources_path or self._find_design_resources()
+        
+    def _find_design_resources(self) -> Optional[Path]:
+        """Find Awesome Design MD resources."""
+        candidates = [
+            Path("/workspace/external/awesome-design-md"),
+            Path.home() / ".claude" / "skills" / "awesome-design-md",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+    
+    async def find_design_patterns(self, pattern_type: str) -> ExecutionResult:
+        """Find relevant design patterns."""
+        task = Task(
+            title="Design Pattern Lookup",
+            description=f"Find design patterns for: {pattern_type}",
+            assigned_role="pattern_specialist"
+        )
+        
+        return await self.execute(task)
+    
+    async def get_inspiration(self, topic: str) -> ExecutionResult:
+        """Get design inspiration for a topic."""
+        task = Task(
+            title="Design Inspiration",
+            description=f"Gather inspiration for: {topic}",
+            assigned_role="resource_curator"
+        )
+        
+        return await self.execute(task)
+
+
+class Img2ThreeJSAgent(ExternalAgentBase):
+    """
+    Adapter for Img2ThreeJS - Image to 3D Conversion.
+    
+    Provides 3D model generation capabilities:
+    - Image to 3D mesh conversion
+    - Texture generation
+    - Three.js scene setup
+    - 3D asset optimization
+    """
+    
+    CONFIG = AgentConfig(
+        name="Img2ThreeJSAgent",
+        cli_command="img2threejs",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=600,
+        required_env_vars=[],
+        capabilities=[
+            "image_to_3d", "mesh_generation", "texture_creation",
+            "threejs_setup", "asset_optimization"
+        ],
+        roles=["3d_artist", "technical_artist", "threejs_developer"]
+    )
+    
+    def __init__(self, converter_path: Optional[Path] = None):
+        super().__init__()
+        self.converter_path = converter_path or self._find_img2threejs()
+        
+    def _find_img2threejs(self) -> Optional[Path]:
+        """Find Img2ThreeJS installation."""
+        candidates = [
+            Path("/workspace/external/img2threejs"),
+            Path.home() / ".local" / "bin" / "img2threejs",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+    
+    async def convert_image_to_3d(self, image_path: Path, output_path: Path) -> ExecutionResult:
+        """Convert image to 3D model."""
+        task = Task(
+            title="Image to 3D Conversion",
+            description=f"Convert {image_path} to 3D model at {output_path}",
+            assigned_role="3d_artist"
+        )
+        
+        return await self.execute(task)
+    
+    async def generate_threejs_scene(self, model_path: Path) -> ExecutionResult:
+        """Generate Three.js scene with model."""
+        task = Task(
+            title="Three.js Scene Generation",
+            description=f"Create Three.js scene for model: {model_path}",
+            assigned_role="threejs_developer"
+        )
+        
+        return await self.execute(task)
+
+
+class TasteSkillAgent(ExternalAgentBase):
+    """
+    Adapter for Taste Skill - Aesthetic Evaluation.
+    
+    Provides design taste and aesthetic judgment:
+    - Visual appeal assessment
+    - Color harmony analysis
+    - Typography evaluation
+    - Composition review
+    - Style consistency check
+    """
+    
+    CONFIG = AgentConfig(
+        name="TasteSkillAgent",
+        cli_command="claude",
+        version_args=["--version"],
+        execute_args=[],
+        default_timeout=600,
+        required_env_vars=["ANTHROPIC_API_KEY"],
+        capabilities=[
+            "aesthetic_evaluation", "color_harmony",
+            "typography_review", "composition_analysis", "style_assessment"
+        ],
+        roles=["taste_curator", "aesthetic_judge", "style_consultant"]
+    )
+    
+    def __init__(self, taste_path: Optional[Path] = None):
+        super().__init__()
+        self.taste_path = taste_path or self._find_taste_skill()
+        
+    def _find_taste_skill(self) -> Optional[Path]:
+        """Find Taste Skill installation."""
+        candidates = [
+            Path("/workspace/external/taste-skill"),
+            Path.home() / ".claude" / "skills" / "taste-skill",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+    
+    async def evaluate_aesthetics(self, design_description: str) -> ReviewResult:
+        """Evaluate design aesthetics."""
+        task = Task(
+            title="Aesthetic Evaluation",
+            description=f"Evaluate: {design_description}",
+            assigned_role="aesthetic_judge"
+        )
+        
+        result = await self.execute(task)
+        
+        if result.success:
+            return ReviewResult(
+                passed=True,
+                suggestions=[result.output] if result.output else [],
+                score=0.8
+            )
+        else:
+            return ReviewResult(
+                passed=False,
+                issues=[result.error or "Aesthetic evaluation failed"],
+                score=0.4
+            )
+    
+    async def color_harmony_analysis(self, colors: list[str]) -> ReviewResult:
+        """Analyze color harmony."""
+        task = Task(
+            title="Color Harmony Analysis",
+            description=f"Analyze color palette: {', '.join(colors)}",
+            assigned_role="taste_curator"
+        )
+        
+        result = await self.execute(task)
+        
+        if result.success:
+            return ReviewResult(
+                passed=True,
+                suggestions=[result.output] if result.output else [],
+                score=0.85
+            )
+        else:
+            return ReviewResult(
+                passed=False,
+                issues=[result.error or "Color analysis failed"],
+                score=0.4
+            )
+
+
+# Update registry with new agents
+EXTENDED_AGENTS_REGISTRY.update({
+    "ui_ux_pro_max": UIUXProMaxAgent,
+    "ecc": ECCAgent,
+    "openviking": OpenVikingAgent,
+    "impeccable": ImpeccableAgent,
+    "playwright": PlaywrightAgent,
+    "awesome_design_md": AwesomeDesignMDAgent,
+    "img2threejs": Img2ThreeJSAgent,
+    "taste_skill": TasteSkillAgent,
+})

@@ -19,3 +19,27 @@
 [submodule "external/composio"]
 	path = external/composio
 	url = https://github.com/ComposioHQ/composio.git
+[submodule "external/ui-ux-pro-max-skill"]
+	path = external/ui-ux-pro-max-skill
+	url = https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
+[submodule "external/ECC"]
+	path = external/ECC
+	url = https://github.com/affaan-m/ECC.git
+[submodule "external/OpenViking"]
+	path = external/OpenViking
+	url = https://github.com/volcengine/OpenViking.git
+[submodule "external/impeccable"]
+	path = external/impeccable
+	url = https://github.com/pbakaus/impeccable.git
+[submodule "external/playwright-cli"]
+	path = external/playwright-cli
+	url = https://github.com/microsoft/playwright-cli.git
+[submodule "external/awesome-design-md"]
+	path = external/awesome-design-md
+	url = https://github.com/VoltAgent/awesome-design-md.git
+[submodule "external/img2threejs"]
+	path = external/img2threejs
+	url = https://github.com/img2threejs/img2threejs.git
+[submodule "external/taste-skill"]
+	path = external/taste-skill
+	url = https://github.com/Leonxlnx/taste-skill.git
