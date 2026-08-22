@@ -70,19 +70,25 @@ class TestSandboxHardFail:
         config = SandboxConfig(
             denied_commands=["rm -rf", "sudo", "curl http"]
         )
-        manager = SandboxManager(config=config)
         
-        # Mock is_available to avoid Docker requirement for this test
-        with patch.object(manager, 'is_available', return_value=True):
-            with patch.object(manager, '_build_docker_run_args', return_value={}):
-                with patch.object(manager, 'docker_client'):
+        # Mock docker.from_env to avoid Docker requirement
+        with patch("docker.from_env") as mock_docker_from_env:
+            mock_client = MagicMock()
+            mock_client.ping.return_value = True
+            mock_docker_from_env.return_value = mock_client
+            
+            manager = SandboxManager(config=config)
+
+            # Mock is_available and _build_docker_run_args
+            with patch.object(manager, "is_available", return_value=True):
+                with patch.object(manager, "_build_docker_run_args", return_value={}):
                     result = asyncio.run(
                         manager.execute("task-789", "rm -rf /tmp")
                     )
-                    
+
                     assert result.policy_violation is True
                     assert "denied pattern" in result.violation_details
-    
+
     def test_network_policy_summary(self):
         """Test network policy reporting."""
         config = SandboxConfig(

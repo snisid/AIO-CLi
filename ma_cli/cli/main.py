@@ -640,10 +640,10 @@ def loop():
 @loop.command("list")
 def list_loops():
     """List available loops."""
-    from ..loops.engine import LoopEngine, get_loop_engine
+    from ..loops import get_loop_engine
     
     loop_engine = get_loop_engine()
-    loops = loop_engine.list_loops()
+    loops = loop_engine.list_all()
     
     if not loops:
         click.echo("No loops registered.")
@@ -653,7 +653,7 @@ def list_loops():
     click.echo("=" * 50)
     
     for loop_def in loops:
-        status_icon = "●" if loop_def.enabled else "○"
+        status_icon = "●"
         click.echo(f"{status_icon} {loop_def.name}")
         click.echo(f"   Objective: {loop_def.objective}")
         click.echo(f"   Agents: {', '.join(loop_def.agents) if loop_def.agents else 'auto'}")
