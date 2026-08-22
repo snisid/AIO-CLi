@@ -4,13 +4,20 @@ from .adapters import (
     AgentConfig,
     AgentRegistry,
     AgentResult,
+    AwesomeDesignMDAgent,
     ClaudeAgent,
     CLIInfo,
     CodexAgent,
+    ECCExternalAgent,
     ExternalAgentBase,
     HermesAgent,
+    Img2ThreeJSAgent,
+    ImpeccableExternalAgent,
     OpenClawAgent,
+    OpenVikingExternalAgent,
     QwenAgent,
+    TasteSkillExternalAgent,
+    UIUXProMaxExternalAgent,
     ZcodeAgent,
     get_agent_registry,
 )
@@ -23,6 +30,11 @@ from .extended_agents import (
     FrontendDesignAgent,
     SuperPowersAgent,
     ComposioAgent,
+    UIUXProMaxAgent,
+    ECCAgent,
+    OpenVikingAgent,
+    ImpeccableAgent,
+    PlaywrightAgent,
     get_extended_agent,
     EXTENDED_AGENTS_REGISTRY,
 )
@@ -31,7 +43,7 @@ __all__ = [
     # Base
     "Agent",
     "AgentInfo",
-    # Adapters
+    # Adapters - Base External Agents
     "AgentConfig",
     "AgentRegistry",
     "AgentResult",
@@ -44,7 +56,7 @@ __all__ = [
     "QwenAgent",
     "ZcodeAgent",
     "get_agent_registry",
-    # Extended Agents
+    # Extended Agents from extended_agents.py
     "GStackAgent",
     "ClaudeMEMAgent",
     "SecurityReviewAgent",
@@ -52,6 +64,19 @@ __all__ = [
     "FrontendDesignAgent",
     "SuperPowersAgent",
     "ComposioAgent",
+    "UIUXProMaxAgent",
+    "ECCAgent",
+    "OpenVikingAgent",
+    "ImpeccableAgent",
+    "PlaywrightAgent",
     "get_extended_agent",
     "EXTENDED_AGENTS_REGISTRY",
+    # External Agents from external_agents/ directory
+    "ECCExternalAgent",
+    "OpenVikingExternalAgent",
+    "ImpeccableExternalAgent",
+    "UIUXProMaxExternalAgent",
+    "TasteSkillExternalAgent",
+    "AwesomeDesignMDAgent",
+    "Img2ThreeJSAgent",
 ]
