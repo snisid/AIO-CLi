@@ -1,0 +1,175 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ma-cli"
+version = "1.0.0"
+description = "Multi-Agent Autonomous CLI - An independent agent orchestration platform for autonomous software engineering"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "MA-CLI Core Team", email = "team@ma-cli.dev"}
+]
+keywords = [
+    "ai",
+    "agents",
+    "automation",
+    "cli",
+    "llm",
+    "multi-agent",
+    "orchestration",
+    "autonomous",
+    "coding",
+    "devops"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Framework :: Pytest",
+]
+
+dependencies = [
+    "click>=8.1.0",
+    "pydantic>=2.5.0",
+    "pyyaml>=6.0.1",
+    "httpx>=0.25.0",
+    "rich>=13.7.0",
+    "python-dotenv>=1.0.0",
+    "aiosqlite>=0.19.0",
+    "tenacity>=8.2.0",
+    "watchdog>=3.0.0",
+]
+
+[project.optional-dependencies]
+# AI Providers
+ollama = ["ollama>=0.1.0"]
+openai = ["openai>=1.10.0"]
+anthropic = ["anthropic>=0.18.0"]
+google = ["google-generativeai>=0.4.0"]
+providers = ["ma-cli[ollama]", "ma-cli[openai]", "ma-cli[anthropic]", "ma-cli[google]"]
+
+# Infrastructure
+docker = ["docker>=7.0.0"]
+git = ["GitPython>=3.1.40"]
+sandbox = ["ma-cli[docker]"]
+
+# Testing & Quality
+playwright = ["playwright>=1.40.0"]
+testing = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "pytest-cov>=4.1.0"]
+
+# Development
+dev = [
+    "ma-cli[providers]",
+    "ma-cli[sandbox]",
+    "ma-cli[git]",
+    "ma-cli[testing]",
+    "ma-cli[playwright]",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
+]
+
+# TUI (Future)
+tui = ["textual>=0.50.0"]
+
+# All extras
+all = [
+    "ma-cli[providers]",
+    "ma-cli[sandbox]",
+    "ma-cli[git]",
+    "ma-cli[testing]",
+    "ma-cli[playwright]",
+    "ma-cli[tui]",
+]
+
+[project.scripts]
+ma-cli = "ma_cli.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/snisid/AIO-CLi"
+Documentation = "https://github.com/snisid/AIO-CLi/tree/main/docs"
+Repository = "https://github.com/snisid/AIO-CLi"
+Issues = "https://github.com/snisid/AIO-CLi/issues"
+Changelog = "https://github.com/snisid/AIO-CLi/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ma_cli*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function call in argument defaults
+    "ARG001", # unused function argument (allowed for interfaces)
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+"tests/*" = ["S101", "ARG"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_configs = true
+exclude = ["tests/", "build/", "dist/"]
+
+[[tool.mypy.overrides]]
+module = "ma_cli.tests.*"
+disallow_untyped_defs = false
+check_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["ma_cli/tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["ma_cli"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]

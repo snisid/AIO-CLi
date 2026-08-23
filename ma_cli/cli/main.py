@@ -28,7 +28,7 @@ from ..workspace.manager import get_workspace_manager
 @click.version_option(version=__version__, prog_name="ma-cli")
 def cli():
     """MA-CLI - Multi-Agent Autonomous CLI
-    
+
     An independent agent orchestration platform capable of planning,
     task decomposition, agent selection, model selection, and more.
     """
@@ -37,32 +37,42 @@ def cli():
 @cli.command()
 def init():
     """Initialize a new MA-CLI project."""
-    
+
     click.echo("Initializing MA-CLI project...")
-    
+
     # Create .ma-cli directory
     ma_cli_dir = Path.cwd() / ".ma-cli"
     ma_cli_dir.mkdir(exist_ok=True)
-    
+
     # Create subdirectories
-    for subdir in ["state", "runs", "tasks", "workspaces", "memory", "logs", 
-                   "reports", "plans", "cache", "loops"]:
+    for subdir in [
+        "state",
+        "runs",
+        "tasks",
+        "workspaces",
+        "memory",
+        "logs",
+        "reports",
+        "plans",
+        "cache",
+        "loops",
+    ]:
         (ma_cli_dir / subdir).mkdir(exist_ok=True)
-    
+
     # Initialize config engine
     config_engine = ConfigurationEngine()
-    config = config_engine.load()
-    
+    config_engine.load()
+
     click.echo(f"Created config file: {config_engine.config_path}")
-    
+
     # Initialize state manager
-    state_manager = get_state_manager()
+    get_state_manager()
     click.echo("Initialized state database")
-    
+
     # Initialize workspace manager
-    workspace_manager = get_workspace_manager()
+    get_workspace_manager()
     click.echo("Initialized workspace manager")
-    
+
     click.echo("\nProject initialized successfully!")
     click.echo("Run 'ma-cli doctor' to check system status.")
 
@@ -70,24 +80,24 @@ def init():
 @cli.command()
 def setup():
     """Set up MA-CLI configuration and environment."""
-    
+
     click.echo("Setting up MA-CLI...")
-    
+
     # Ensure config directory exists
     config_dir = Path.home() / ".ma-cli"
     config_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Create default config
     config_engine = ConfigurationEngine()
     config = config_engine.load()
     config_engine.save(config)
-    
+
     click.echo(f"Configuration created at: {config_engine.config_path}")
-    
+
     # Initialize databases
-    state_manager = get_state_manager()
+    get_state_manager()
     click.echo("State database initialized")
-    
+
     # Show configuration summary
     click.echo("\nConfiguration Summary:")
     click.echo("-" * 40)
@@ -95,12 +105,12 @@ def setup():
     click.echo(f"Default Provider: {config.runtime.default_provider}")
     click.echo(f"Autonomy Level: {config.runtime.autonomy_level.name}")
     click.echo(f"Sandbox Enabled: {config.runtime.sandbox_enabled}")
-    
+
     click.echo("\nProviders configured:")
     for name, provider in config.providers.items():
         status = "✓" if provider.enabled else "✗"
         click.echo(f"  {status} {name}: {provider.base_url or '(no URL)'}")
-    
+
     click.echo("\nSetup complete! Run 'ma-cli doctor' to verify.")
 
 
@@ -108,27 +118,29 @@ def setup():
 def doctor():
     """Check system health and configuration."""
     import subprocess
-    
+
     click.echo("MA-CLI Doctor")
     click.echo("=" * 50)
-    
+
     issues = []
     warnings = []
-    
+
     # Runtime check
     click.echo("\nRuntime:")
     try:
-        python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        python_version = (
+            f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        )
         click.echo(f"  ✓ Python {python_version}")
     except Exception as e:
         click.echo(f"  ✗ Python check failed: {e}")
         issues.append("Python check failed")
-    
+
     click.echo(f"  ✓ MA-CLI {__version__}")
-    
+
     # System checks
     click.echo("\nSystem:")
-    
+
     # Git check
     try:
         result = subprocess.run(["git", "--version"], capture_output=True, text=True, timeout=5)
@@ -140,7 +152,7 @@ def doctor():
     except Exception as e:
         click.echo(f"  ✗ Git check failed: {e}")
         issues.append("Git check failed")
-    
+
     # Docker check (optional)
     try:
         result = subprocess.run(["docker", "--version"], capture_output=True, text=True, timeout=5)
@@ -152,13 +164,14 @@ def doctor():
     except Exception:
         click.echo("  ⚠ Docker not installed (optional)")
         warnings.append("Docker not available for sandboxing")
-    
+
     # Provider checks
     click.echo("\nProviders:")
-    
+
     # Ollama check
     try:
         import httpx
+
         response = httpx.get("http://localhost:11434/api/tags", timeout=5)
         if response.status_code == 200:
             data = response.json()
@@ -170,10 +183,11 @@ def doctor():
     except Exception:
         click.echo("  ⚠ Ollama not running")
         warnings.append("Ollama not available")
-    
+
     # OmniRoute check
     try:
         import httpx
+
         response = httpx.get("http://localhost:20128/v1/models", timeout=5)
         if response.status_code == 200:
             click.echo("  ✓ OmniRoute connected")
@@ -183,18 +197,18 @@ def doctor():
     except Exception:
         click.echo("  ⚠ OmniRoute not running")
         warnings.append("OmniRoute not available")
-    
+
     # 9router check
     click.echo("  ⚠ 9router not configured")
     warnings.append("9router not configured")
-    
+
     # Configuration check
     click.echo("\nConfiguration:")
     try:
         config_engine = ConfigurationEngine()
-        config = config_engine.load()
+        config_engine.load()
         click.echo(f"  ✓ Config file: {config_engine.config_path}")
-        
+
         validation_warnings = config_engine.validate()
         if validation_warnings:
             for warning in validation_warnings:
@@ -205,7 +219,7 @@ def doctor():
     except Exception as e:
         click.echo(f"  ✗ Configuration error: {e}")
         issues.append(f"Configuration error: {e}")
-    
+
     # State check
     click.echo("\nState:")
     try:
@@ -214,7 +228,7 @@ def doctor():
     except Exception as e:
         click.echo(f"  ✗ State error: {e}")
         issues.append(f"State error: {e}")
-    
+
     # Agent status
     click.echo("\nAgents:")
     click.echo("  ✓ NativeAgent ready")
@@ -222,10 +236,10 @@ def doctor():
     click.echo("  ⚠ CodexAgent requires API key")
     click.echo("  ⚠ QwenAgent requires configuration")
     click.echo("  ⚠ ZcodeAgent requires configuration")
-    
+
     # Overall status
     click.echo("\n" + "=" * 50)
-    
+
     if issues:
         click.echo("Status: ERROR")
         click.echo("\nErrors:")
@@ -238,7 +252,7 @@ def doctor():
             click.echo(f"  • {warning}")
     else:
         click.echo("Status: READY")
-    
+
     click.echo("\nNote: Warnings are normal for initial setup.")
     click.echo("Configure providers and agents to enable full functionality.")
 
@@ -248,36 +262,36 @@ def status():
     """Show current MA-CLI status."""
     click.echo("MA-CLI Status")
     click.echo("=" * 50)
-    
+
     # Get supervisor status
     supervisor = get_supervisor()
     status = supervisor.get_status()
-    
+
     click.echo("\nProcesses:")
     click.echo(f"  Total: {status['total_processes']}")
     click.echo(f"  Running: {status['running']}")
     click.echo(f"  Queued: {status['queued']}")
     click.echo(f"  Completed: {status['completed']}")
     click.echo(f"  Failed: {status['failed']}")
-    
+
     # Get system health
     health = supervisor.get_system_health()
     click.echo(f"\nMemory Used: {health.memory_used_mb:.1f} MB")
     click.echo(f"Active Processes: {health.active_processes}")
     click.echo(f"Queued Tasks: {health.queued_tasks}")
-    
+
     # Get event bus stats
     event_bus = get_event_bus()
     stats = event_bus.get_stats()
     click.echo("\nEvent Bus:")
     click.echo(f"  Subscribers: {stats['total_subscribers']}")
     click.echo(f"  Events in History: {stats['events_in_history']}")
-    
+
     # Get workspace info
     workspace_manager = get_workspace_manager()
     workspaces = workspace_manager.list_workspaces()
     click.echo(f"\nWorkspaces: {len(workspaces)}")
-    
+
     current_ws = workspace_manager.current_workspace
     if current_ws:
         click.echo(f"  Current: {current_ws.name}")
@@ -292,33 +306,33 @@ def agents():
 def list_agents():
     """List available agents."""
     from ..agents import get_agent_registry
-    
+
     registry = get_agent_registry()
     all_agents = registry.list_all()
-    
+
     click.echo("Available Agents:")
     click.echo("-" * 60)
-    
+
     for agent in all_agents:
         health_icon = "✓" if agent.health == HealthStatus.HEALTHY else "⚠"
         status_icon = "●" if agent.status == AgentStatus.IDLE else "○"
-        
+
         cli_info_line = ""
-        if hasattr(agent, 'config'):
+        if hasattr(agent, "config"):
             cli_cmd = agent.config.cli_command
             cli_info_line = f" (CLI: {cli_cmd})"
-        
+
         click.echo(f"  {status_icon} {agent.name}{cli_info_line}")
         click.echo(f"      Provider: {agent.provider}")
         click.echo(f"      Status: {agent.status.value} {health_icon}")
         click.echo(f"      Capabilities: {', '.join(agent.capabilities)}")
         click.echo(f"      Roles: {', '.join(agent.roles)}")
-        
+
         # Show required env vars if any
-        if hasattr(agent, 'config') and agent.config.required_env_vars:
+        if hasattr(agent, "config") and agent.config.required_env_vars:
             click.echo(f"      Required Env: {', '.join(agent.config.required_env_vars)}")
         click.echo()
-    
+
     click.echo("Note: External agents require proper CLI installation and API keys.")
 
 
@@ -326,37 +340,38 @@ def list_agents():
 def agent_status():
     """Show detailed agent status."""
     from ..agents import get_agent_registry
-    
+
     registry = get_agent_registry()
     all_agents = registry.list_all()
-    
+
     click.echo("Agent Status")
     click.echo("=" * 60)
-    
+
     for agent in all_agents:
         click.echo(f"\n{agent.name}:")
         click.echo(f"  ID: {agent.id}")
         click.echo(f"  Status: {agent.status.value}")
         click.echo(f"  Health: {agent.health.value}")
         click.echo(f"  Provider: {agent.provider}")
-        
+
         # Get detailed info
-        if hasattr(agent, 'inspect'):
+        if hasattr(agent, "inspect"):
             import asyncio
+
             try:
                 loop = asyncio.get_event_loop()
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-            
+
             info = loop.run_until_complete(agent.inspect())
-            
-            if info.get('cli_exists'):
+
+            if info.get("cli_exists"):
                 click.echo(f"  CLI Path: {info.get('cli_path', 'N/A')}")
                 click.echo(f"  CLI Version: {info.get('cli_version', 'Unknown')}")
             else:
                 click.echo(f"  CLI: Not found ({info.get('error', 'Unknown error')})")
-        
+
         click.echo(f"  Capabilities: {', '.join(agent.capabilities)}")
         click.echo(f"  Roles: {', '.join(agent.roles)}")
 
@@ -371,10 +386,10 @@ def list_providers():
     """List configured providers."""
     config_engine = ConfigurationEngine()
     config = config_engine.load()
-    
+
     click.echo("Configured Providers:")
     click.echo("-" * 50)
-    
+
     for name, provider_config in config.providers.items():
         status = "✓" if provider_config.enabled else "✗"
         click.echo(f"  {status} {name}")
@@ -388,26 +403,26 @@ def list_providers():
 def test_provider(provider_name: str):
     """Test connectivity to a provider."""
     import httpx
-    
+
     config_engine = ConfigurationEngine()
     config = config_engine.load()
-    
+
     provider_config = config.providers.get(provider_name)
     if not provider_config:
         click.echo(f"Error: Provider '{provider_name}' not found")
         return
-    
+
     click.echo(f"Testing provider: {provider_name}")
     click.echo(f"URL: {provider_config.base_url}")
-    
+
     if not provider_config.base_url:
         click.echo("Error: No base_url configured")
         return
-    
+
     try:
         # Try to connect
         response = httpx.get(f"{provider_config.base_url}/models", timeout=10)
-        
+
         if response.status_code == 200:
             models = response.json().get("models", [])
             click.echo("✓ Connected successfully")
@@ -432,17 +447,17 @@ def list_models():
     """List available model aliases."""
     config_engine = ConfigurationEngine()
     config = config_engine.load()
-    
+
     click.echo("Model Aliases:")
     click.echo("-" * 50)
-    
+
     for alias, model_config in config.models.items():
         click.echo(f"  {alias}")
         click.echo(f"    Provider: {model_config.provider}")
         click.echo(f"    Model ID: {model_config.model_id or '(auto-discover)'}")
         if model_config.fallback:
             click.echo(f"    Fallback: {model_config.fallback}")
-    
+
     click.echo("\nNote: Actual model IDs are discovered at runtime.")
 
 
@@ -451,12 +466,12 @@ def config():
     """Show current configuration."""
     config_engine = ConfigurationEngine()
     config = config_engine.load()
-    
+
     click.echo("MA-CLI Configuration")
     click.echo("=" * 50)
     click.echo(f"Config file: {config_engine.config_path}")
     click.echo("")
-    
+
     click.echo("Runtime Settings:")
     click.echo(f"  Autonomy Level: {config.runtime.autonomy_level.name}")
     click.echo(f"  Default Agent: {config.runtime.default_agent}")
@@ -464,12 +479,12 @@ def config():
     click.echo(f"  Sandbox Enabled: {config.runtime.sandbox_enabled}")
     click.echo(f"  Audit Logging: {config.runtime.audit_logging}")
     click.echo(f"  Max Concurrent Tasks: {config.runtime.max_concurrent_tasks}")
-    
+
     click.echo("\nProviders:")
     for name, p in config.providers.items():
         enabled = "✓" if p.enabled else "✗"
         click.echo(f"  {enabled} {name}: {p.type}")
-    
+
     click.echo("\nModel Aliases:")
     for alias, m in config.models.items():
         click.echo(f"  {alias} → {m.provider}")
@@ -485,7 +500,7 @@ def list_memory():
     """List memory entries."""
     memory_engine = create_memory_engine()
     summary = memory_engine.get_summary()
-    
+
     click.echo("MA-CLI Memory Summary")
     click.echo("=" * 50)
     click.echo(format_memory_summary(summary))
@@ -498,14 +513,14 @@ def search_memory(query: str, limit: int):
     """Search long-term memory."""
     memory_engine = create_memory_engine()
     results = memory_engine.search_long_term(query, limit)
-    
+
     if not results:
         click.echo(f"No memories found for: {query}")
         return
-    
+
     click.echo(f"Search results for '{query}':")
     click.echo("-" * 50)
-    
+
     for i, entry in enumerate(results, 1):
         click.echo(f"\n{i}. [{entry.memory_type.value}] {entry.key}")
         click.echo(f"   Content: {entry.content[:200]}...")
@@ -519,7 +534,7 @@ def cleanup_memory(days: int):
     """Clean up old memory entries."""
     memory_engine = create_memory_engine()
     deleted = memory_engine.cleanup_old_memory(days)
-    
+
     click.echo(f"Cleaned up {deleted} memory entries older than {days} days.")
 
 
@@ -528,12 +543,12 @@ def cleanup_memory(days: int):
 @click.option("--type", "memory_type", default=None, help="Filter by memory type")
 def export_memory(output_path: str, memory_type: str):
     """Export memory to JSON file."""
-    
+
     memory_engine = create_memory_engine()
     filters = None
     if memory_type:
         filters = {"memory_type": memory_type}
-    
+
     count = memory_engine.export_memory(Path(output_path), filters)
     click.echo(f"Exported {count} memory entries to {output_path}")
 
@@ -542,7 +557,7 @@ def export_memory(output_path: str, memory_type: str):
 @click.argument("input_path", type=click.Path(exists=True))
 def import_memory(input_path: str):
     """Import memory from JSON file."""
-    
+
     memory_engine = create_memory_engine()
     count = memory_engine.import_memory(Path(input_path))
     click.echo(f"Imported {count} memory entries from {input_path}")
@@ -558,7 +573,7 @@ def list_sessions():
     """List recent sessions."""
     session_manager = create_session_manager()
     sessions = session_manager.get_recent_sessions(limit=10)
-    
+
     click.echo("Recent Sessions")
     click.echo("=" * 50)
     click.echo(format_session_list(sessions))
@@ -570,17 +585,17 @@ def resume_session(session_id: str):
     """Resume a previous session."""
     session_manager = create_session_manager()
     state = session_manager.resume_session(session_id)
-    
+
     if state is None:
         click.echo(f"Session not found: {session_id}", err=True)
         sys.exit(1)
-    
+
     click.echo(f"Resumed session: {session_id}")
     click.echo(f"Status: {state.status}")
     click.echo(f"Request: {state.request or 'N/A'}")
     click.echo(f"Completed tasks: {len(state.completed_tasks)}")
     click.echo(f"Pending tasks: {len(state.pending_tasks)}")
-    
+
     if state.errors:
         click.echo(f"Errors: {len(state.errors)}")
 
@@ -591,11 +606,11 @@ def show_session(session_id: str):
     """Show details of a specific session."""
     session_manager = create_session_manager()
     state = session_manager.load_session(session_id)
-    
+
     if state is None:
         click.echo(f"Session not found: {session_id}", err=True)
         sys.exit(1)
-    
+
     click.echo(f"Session: {session_id}")
     click.echo("=" * 50)
     click.echo(f"Status: {state.status}")
@@ -608,15 +623,15 @@ def show_session(session_id: str):
     click.echo(f"  Total: {len(state.tasks)}")
     click.echo(f"  Completed: {len(state.completed_tasks)}")
     click.echo(f"  Pending: {len(state.pending_tasks)}")
-    
+
     if state.agent_states:
         click.echo("\nAgent States:")
         for agent, status in state.agent_states.items():
             click.echo(f"  {agent}: {status}")
-    
+
     if state.outputs:
         click.echo(f"\nOutputs: {len(state.outputs)} items")
-    
+
     if state.errors:
         click.echo("\nErrors:")
         for error in state.errors:
@@ -632,17 +647,17 @@ def loop():
 def list_loops():
     """List available loops."""
     from ..loops import get_loop_engine
-    
+
     loop_engine = get_loop_engine()
     loops = loop_engine.list_all()
-    
+
     if not loops:
         click.echo("No loops registered.")
         return
-    
+
     click.echo("Available Loops")
     click.echo("=" * 50)
-    
+
     for loop_def in loops:
         status_icon = "●"
         click.echo(f"{status_icon} {loop_def.name}")
@@ -659,16 +674,16 @@ def list_loops():
 def create_loop(name: str, objective: str, agents: tuple[str, ...]):
     """Create a new loop definition."""
     from ..loops.engine import LoopDefinition, get_loop_engine
-    
+
     loop_engine = get_loop_engine()
-    
+
     loop_def = LoopDefinition(
         name=name,
         objective=objective,
         agents=list(agents) if agents else [],
-        steps=[]  # Steps can be added later
+        steps=[],  # Steps can be added later
     )
-    
+
     loop_engine.register_loop(loop_def)
     click.echo(f"Created loop: {name}")
 
@@ -679,16 +694,16 @@ def create_loop(name: str, objective: str, agents: tuple[str, ...]):
 def run_loop(loop_name: str, input_data: tuple[str, ...]):
     """Run a loop."""
     from ..loops.engine import get_loop_engine
-    
-    loop_engine = get_loop_engine()
-    
+
+    get_loop_engine()
+
     # Parse inputs
     inputs = {}
     for item in input_data:
         if "=" in item:
             key, value = item.split("=", 1)
             inputs[key] = value
-    
+
     click.echo(f"Running loop: {loop_name}")
     click.echo(f"Inputs: {inputs or 'none'}")
     click.echo("(Loop execution will be fully implemented in Phase 13+)")
