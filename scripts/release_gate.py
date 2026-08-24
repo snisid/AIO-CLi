@@ -13,10 +13,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN_TEXT = ("TODO", "FIXME", "NotImplemented", "future implementation", "placeholder", "mock-only")
 EXCLUDED = {".git", ".venv", "venv", "__pycache__", "ma_cli.egg-info"}
+SELF = Path(__file__).resolve()
 
 
 def production_files() -> list[Path]:
-    return [p for p in ROOT.rglob("*.py") if not any(part in EXCLUDED for part in p.parts)]
+    return [p for p in ROOT.rglob("*.py") if p.resolve() != SELF and not any(part in EXCLUDED for part in p.parts)]
 
 
 def scan_forbidden() -> list[str]:
