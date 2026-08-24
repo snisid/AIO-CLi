@@ -1,84 +1,124 @@
 # MA-CLI
 
-**Multi-Agent Autonomous CLI**
+**Multi-Agent Autonomous CLI / Autonomous AI Development Runtime**
 
-An independent agent orchestration platform capable of planning, task decomposition, agent selection, model selection, tool selection, execution, observation, supervision, and more.
+MA-CLI is an independent agent orchestration platform designed to plan work, decompose tasks, route models, execute policy-controlled tools, observe results, repair failures, and produce evidence.
 
-## Overview
+It is **not** a wrapper that requires Claude Code, Codex, Qwen CLI, or another external coding CLI. External agents and providers can remain optional integrations.
 
-MA-CLI is NOT a simple wrapper around Claude Code, Codex, Qwen CLI, or Zcode. It is an **independent Agent Orchestration Platform** that can work with or without external agents.
+## 10/10 engineering contract
 
-### Key Features
+A feature is complete only when it passes:
 
-- **NativeAgent**: Works locally with Ollama - no external dependencies required
-- **Multi-Agent Support**: Claude, Codex, Qwen, Zcode, and more
-- **Provider Abstraction**: Ollama, OmniRoute, 9router, Anthropic, OpenAI, etc.
-- **Model Routing**: Intelligent model selection with alias resolution
-- **Loop Engine**: Workflow execution with explicit success/failure criteria
-- **Security First**: Permission engine, sandboxing, audit logging
-- **Memory System**: Persistent, searchable memory with privacy controls
+```text
+IMPLEMENTED
+     ↓
+INTEGRATED
+     ↓
+TESTED
+     ↓
+SECURED
+     ↓
+DOCUMENTED
+     ↓
+AUTOMATED
+     ↓
+PRODUCTION VERIFIED
+```
+
+Mocks do not count as live verification. `TODO`, placeholders, mock-only paths, disconnected features, or documentation without executable integration do not count as completion.
+
+See:
+
+- `docs/QUALITY_10_10.md` — mandatory completion contract
+- `docs/10_10_DOMAIN_MATRIX.md` — evidence matrix and release blockers
+
+## Current architecture
+
+The target native runtime is:
+
+```text
+USER
+ ↓
+Intent Analyzer
+ ↓
+Planner
+ ↓
+Task Graph
+ ↓
+Native Agent
+ ↓
+Coder / Tester / Research / Security
+ ↓
+Model Router
+ ↓
+Tool Engine
+ ↓
+Security / Sandbox
+ ↓
+Observer
+ ↓
+Diagnoser / Repair
+ ↓
+Validator
+ ↓
+Finalizer
+ ↓
+RESULT
+```
+
+The repository is being hardened incrementally. **The project does not claim global 10/10 until the domain matrix reaches PASS for production verification.**
 
 ## Quick Start
 
 ```bash
-# Install
-pip install -e .
-
-# Check system status
+pip install -e ".[dev]"
 ma-cli doctor
-
-# Initialize a project
 ma-cli init
-
-# Run a task
 ma-cli run "Build authentication with RBAC"
 ```
 
+## Core capabilities
+
+- Native agent orchestration foundation
+- Provider abstraction and model routing
+- Policy-controlled Tool Registry
+- Workspace boundary and path traversal protection
+- Explicit high-risk command approval
+- Command timeout and output capture
+- Tool audit evidence
+- Persistent memory architecture
+- Security and sandbox architecture
+- Cross-platform CI on Linux and Windows
+- Python 3.11–3.13 validation
+- Automated dependency audit
+- Fail-closed release gate
+
 ## Documentation
 
-See the `docs/` folder for detailed documentation:
-
-- [Architecture](docs/ARCHITECTURE.md) - System architecture overview
-- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) - Phase-by-phase plan
-- [Roadmap](docs/ROADMAP.md) - Product roadmap
-- [Security](docs/SECURITY.md) - Security architecture
-- [Providers](docs/PROVIDERS.md) - Provider integration guide
-- [Agents](docs/AGENTS.md) - Agent interface documentation
-- [Loops](docs/LOOPS.md) - Loop engine documentation
-- [Model Routing](docs/MODEL_ROUTING.md) - Model routing guide
-- [Installation](docs/INSTALLATION.md) - Installation instructions
-
-## Development Status
-
-**Current Phase:** Phase 1 - Core Foundation
-
-Completed:
-- [x] Directory structure
-- [x] Architecture documentation
-- [x] Configuration schema
-- [x] Agent interface (ABC)
-- [x] Provider interface (ABC)
-- [x] Model interface
-- [x] Loop interface
-- [x] Task model
-- [x] Event model
-- [x] State model
-- [x] Permission model
-- [x] Initial CLI
-- [x] Doctor command
-- [x] Test infrastructure
+- [Architecture](docs/ARCHITECTURE.md)
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Security](docs/SECURITY.md)
+- [Providers](docs/PROVIDERS.md)
+- [Agents](docs/AGENTS.md)
+- [Loops](docs/LOOPS.md)
+- [Model Routing](docs/MODEL_ROUTING.md)
+- [Installation](docs/INSTALLATION.md)
+- [10/10 Quality Contract](docs/QUALITY_10_10.md)
+- [10/10 Domain Matrix](docs/10_10_DOMAIN_MATRIX.md)
 
 ## Requirements
 
 - Python 3.11+
 - Git
 - Docker (optional, for sandboxing)
-- Ollama (recommended, for local models)
+- Ollama (recommended for local models)
+
+## Release policy
+
+A green unit-test suite is not sufficient for a 10/10 release. Production verification must cover real providers, tools, security controls, MCP, Git, browser, desktop, Windows packaging, upgrade/rollback, and clean-host E2E behavior before release approval.
 
 ## License
 
-MIT License - See LICENSE file for details.
-
-## Contributing
-
-Contributions welcome! Please read our contributing guidelines before submitting PRs. 
+MIT License — See `LICENSE`.
