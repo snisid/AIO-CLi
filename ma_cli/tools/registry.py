@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from ..security.permission_engine import PermissionEngine, PermissionLevel, get_permission_engine
+from ..security.permission_engine import PermissionEngine, PermissionLevel, PermissionPolicy, get_permission_engine
 
 
 @dataclass(frozen=True)
@@ -54,10 +54,23 @@ class ToolAudit:
 class ToolRegistry:
     def __init__(self, workspace: Path | None = None, permission_engine: PermissionEngine | None = None):
         self.workspace = (workspace or Path.cwd()).resolve()
-        self.permission_engine = permission_engine or get_permission_engine()
+        self.permission_engine = permission_engine or self._workspace_policy()
         self._tools: dict[str, ToolSpec] = {}
         self._audit: list[ToolAudit] = []
         self._register_builtin_tools()
+
+    def _workspace_policy(self) -> PermissionEngine:
+        # The workspace is the only filesystem root exposed to native tools.
+        # Command danger patterns remain active from PermissionPolicy.
+        policy = PermissionPolicy(name="workspace-bound", default_level=PermissionLevel.STANDARD)
+        escaped = re.escape(str(self.workspace))
+        policy.allowed_paths = [str(self.workspace)]
+        policy.denied_paths = []
+        policy.add_rule(__import__("ma_cli.security.permission_engine", fromlist=["PermissionRule"]).PermissionRule("read_file", PermissionLevel.READ_ONLY, [f"^{escaped}(?:$|.*)"], []))
+        policy.add_rule(__import__("ma_cli.security.permission_engine", fromlist=["PermissionRule"]).PermissionRule("write_file", PermissionLevel.STANDARD, [f"^{escaped}(?:$|.*)"], []))
+        policy.add_rule(__import__("ma_cli.security.permission_engine", fromlist=["PermissionRule"]).PermissionRule("list_dir", PermissionLevel.READ_ONLY, [f"^{escaped}(?:$|.*)"], []))
+        policy.add_rule(__import__("ma_cli.security.permission_engine", fromlist=["PermissionRule"]).PermissionRule("run_command", PermissionLevel.STANDARD, [], [], False))
+        return PermissionEngine(policy)
 
     def _register_builtin_tools(self) -> None:
         self.register(ToolSpec("read_file", "Read a UTF-8 file.", self.read_file, "standard", ToolSchema("read_file", "Read a UTF-8 file.", {"path": {"type": "string", "required": True}}), action="read_file"))
@@ -90,7 +103,6 @@ class ToolRegistry:
         target = (raw if raw.is_absolute() else self.workspace / raw).resolve(strict=False)
         if target != self.workspace and self.workspace not in target.parents:
             raise PermissionError(f"path escapes workspace: {path}")
-        # Resolve symlink parents and re-check the real path when possible.
         real = target.resolve(strict=False)
         if real != self.workspace and self.workspace not in real.parents:
             raise PermissionError(f"symlink escapes workspace: {path}")
@@ -112,9 +124,8 @@ class ToolRegistry:
                 raise TypeError(f"{name} must be a string")
             if expected == "integer" and (not isinstance(value, int) or isinstance(value, bool)):
                 raise TypeError(f"{name} must be an integer")
-            if expected == "integer":
-                if value < definition.get("minimum", value) or value > definition.get("maximum", value):
-                    raise ValueError(f"{name} outside allowed range")
+            if expected == "integer" and (value < definition.get("minimum", value) or value > definition.get("maximum", value)):
+                raise ValueError(f"{name} outside allowed range")
         unknown = set(kwargs) - set(schema.parameters)
         if unknown:
             raise ValueError(f"unknown arguments: {sorted(unknown)}")
@@ -160,7 +171,6 @@ class ToolRegistry:
             self._audit.append(ToolAudit(invocation_id, name, spec.risk, status == "success", started, duration_ms, status, error))
 
     def execute(self, name: str, **kwargs: Any) -> Any:
-        """Synchronous compatibility API for non-async callers."""
         return asyncio.run(self.execute_async(name, **kwargs))
 
     @staticmethod
