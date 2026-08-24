@@ -10,6 +10,7 @@ ma_cli.egg-info/top_level.txt
 ma_cli/agents/__init__.py
 ma_cli/agents/adapters.py
 ma_cli/agents/base.py
+ma_cli/agents/extended_agents.py
 ma_cli/cli/__init__.py
 ma_cli/cli/main.py
 ma_cli/config/__init__.py
@@ -18,6 +19,14 @@ ma_cli/core/__init__.py
 ma_cli/core/models.py
 ma_cli/events/__init__.py
 ma_cli/events/bus.py
+ma_cli/extended_agents/__init__.py
+ma_cli/extended_agents/design_agent.py
+ma_cli/extended_agents/ecc_agent.py
+ma_cli/extended_agents/impeccable_agent.py
+ma_cli/extended_agents/openviking_agent.py
+ma_cli/extended_agents/taste_agent.py
+ma_cli/extended_agents/threejs_agent.py
+ma_cli/extended_agents/ui_ux_agent.py
 ma_cli/loops/__init__.py
 ma_cli/loops/engine.py
 ma_cli/memory/__init__.py
