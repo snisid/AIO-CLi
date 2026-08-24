@@ -1,1 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g"><stop stop-color="#00D1FF"><animate attributeName="stop-color" values="#00D1FF;#0066FF;#FFD700;#00D1FF" dur="4s" repeatCount="indefinite"/></stop><stop offset="1" stop-color="#FFD700"><animate attributeName="stop-color" values="#FFD700;#FF8A00;#00D1FF;#FFD700" dur="4s" repeatCount="indefinite"/></stop></linearGradient></defs><rect width="512" height="512" rx="112" fill="#0A0F1C"/><circle cx="256" cy="256" r="190" fill="none" stroke="url(#g)" stroke-width="18" stroke-dasharray="600 600"><animateTransform attributeName="transform" type="rotate" from="0 256 256" to="360 256 256" dur="6s" repeatCount="indefinite"/></circle><path d="M112 350V145l72 82 72-82 72 82 72-82v205h-58V250l-86 95-86-95v100z" fill="url(#g)"><animateTransform attributeName="transform" type="scale" values="1;1.03;1" dur="2s" repeatCount="indefinite" additive="sum"/></path><path d="M150 382h72" stroke="#00D1FF" stroke-width="18" stroke-linecap="round"><animate attributeName="opacity" values=".35;1;.35" dur="1.2s" repeatCount="indefinite"/></path></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+<defs>
+ <linearGradient id="m" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFD66B"/><stop offset=".45" stop-color="#FFD700"/><stop offset="1" stop-color="#69D9FF"/></linearGradient>
+ <linearGradient id="o"><stop stop-color="#00D1FF"/><stop offset=".55" stop-color="#0066FF"/><stop offset="1" stop-color="#FFD700"/></linearGradient>
+ <filter id="g"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<circle cx="400" cy="400" r="285" fill="#07101E" stroke="#10253B" stroke-width="20"/>
+<circle cx="400" cy="400" r="292" fill="none" stroke="url(#o)" stroke-width="24" stroke-dasharray="720 1115" filter="url(#g)">
+ <animateTransform attributeName="transform" type="rotate" from="0 400 400" to="360 400 400" dur="6s" repeatCount="indefinite"/>
+</circle>
+<circle cx="400" cy="400" r="270" fill="none" stroke="#00D1FF" stroke-width="7" stroke-dasharray="8 24" opacity=".65">
+ <animateTransform attributeName="transform" type="rotate" from="360 400 400" to="0 400 400" dur="4s" repeatCount="indefinite"/>
+</circle>
+<path d="M190 560 L190 230 L310 360 L400 245 L490 360 L610 230 L610 560 L535 560 L535 410 L400 545 L265 410 L265 560 Z" fill="url(#m)" stroke="#F7E6A8" stroke-width="4">
+ <animateTransform attributeName="transform" type="scale" values="1;1.025;1" dur="2s" repeatCount="indefinite" additive="sum"/>
+</path>
+<path d="M362 540 L438 540" stroke="#00D1FF" stroke-width="20" stroke-linecap="round">
+ <animate attributeName="opacity" values=".35;1;.35" dur="1.2s" repeatCount="indefinite"/>
+</path>
+<path d="M365 440 L400 412 L435 440 L400 467 Z" fill="#00D1FF"/>
+</svg>
