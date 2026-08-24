@@ -1,9 +1,4 @@
-"""Secure, schema-driven tool registry.
-
-Every tool invocation follows:
-registry -> schema -> validation -> permission -> risk -> sandbox -> execution
--> timeout/cancellation -> output capture -> audit -> result validation.
-"""
+"""Secure, schema-driven tool registry."""
 from __future__ import annotations
 
 import asyncio
@@ -17,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from ..security.permission_engine import PermissionEngine, PermissionLevel, PermissionPolicy, get_permission_engine
+from ..security.permission_engine import PermissionEngine, PermissionLevel, PermissionPolicy, PermissionRule
 
 
 @dataclass(frozen=True)
@@ -52,6 +47,8 @@ class ToolAudit:
 
 
 class ToolRegistry:
+    """Single security choke-point for all native tool execution."""
+
     def __init__(self, workspace: Path | None = None, permission_engine: PermissionEngine | None = None):
         self.workspace = (workspace or Path.cwd()).resolve()
         self.permission_engine = permission_engine or self._workspace_policy()
@@ -60,16 +57,12 @@ class ToolRegistry:
         self._register_builtin_tools()
 
     def _workspace_policy(self) -> PermissionEngine:
-        # The workspace is the only filesystem root exposed to native tools.
-        # Command danger patterns remain active from PermissionPolicy.
         policy = PermissionPolicy(name="workspace-bound", default_level=PermissionLevel.STANDARD)
         escaped = re.escape(str(self.workspace))
-        policy.allowed_paths = [str(self.workspace)]
-        policy.denied_paths = []
-        policy.add_rule(__import__("ma_cli.security.permission_engine", fromlist=["PermissionRule"]).PermissionRule("read_file", PermissionLevel.READ_ONLY, [f"^{escaped}(?:$|.*)"], []))
-        policy.add_rule(__import__("ma_cli.security.permission_engine", fromlist=["PermissionRule"]).PermissionRule("write_file", PermissionLevel.STANDARD, [f"^{escaped}(?:$|.*)"], []))
-        policy.add_rule(__import__("ma_cli.security.permission_engine", fromlist=["PermissionRule"]).PermissionRule("list_dir", PermissionLevel.READ_ONLY, [f"^{escaped}(?:$|.*)"], []))
-        policy.add_rule(__import__("ma_cli.security.permission_engine", fromlist=["PermissionRule"]).PermissionRule("run_command", PermissionLevel.STANDARD, [], [], False))
+        policy.add_rule(PermissionRule("read_file", PermissionLevel.READ_ONLY, [f"^{escaped}(?:$|.*)"], []))
+        policy.add_rule(PermissionRule("write_file", PermissionLevel.STANDARD, [f"^{escaped}(?:$|.*)"], []))
+        policy.add_rule(PermissionRule("list_dir", PermissionLevel.READ_ONLY, [f"^{escaped}(?:$|.*)"], []))
+        policy.add_rule(PermissionRule("run_command", PermissionLevel.STANDARD))
         return PermissionEngine(policy)
 
     def _register_builtin_tools(self) -> None:
