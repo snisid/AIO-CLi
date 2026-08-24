@@ -32,10 +32,11 @@ def test_planner_produces_executable_dag():
 
 
 class FakeModel:
-    async def complete(self, messages, *, strategy, capabilities):
+    async def complete(self, messages, *, strategy, capabilities, tools=None):
         class Response:
             content = "model response"
             tool_calls = []
+        assert tools is not None
         return Response()
 
 
