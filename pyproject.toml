@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68","wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ma-cli"
+version = "1.0.0"
+description = "MA-CLI — Multi-Agent Autonomous Coding Platform"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "MA-CLI Core Team"}]
+dependencies = ["click>=8.1","pydantic>=2.0","pyyaml>=6.0","httpx>=0.25","portalocker>=2.8"]
+
+[project.optional-dependencies]
+all = ["openai>=1.0","anthropic>=0.20","docker>=6.0","playwright>=1.40","gitpython>=3.1","rich>=13.0","textual>=0.40"]
+dev = ["pytest>=7.0","pytest-asyncio>=0.21","pytest-cov>=4.0","ruff>=0.1","mypy>=1.0","build>=1.0","twine>=5.0"]
+
+[project.scripts]
+ma-cli = "ma_cli.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["ma_cli*"]
+exclude = ["ma_cli.tests*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["ma_cli/tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
