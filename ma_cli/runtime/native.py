@@ -1,14 +1,9 @@
-"""Native autonomous execution loop.
-
-The runtime owns planning, execution, observation, testing, bounded repair,
-and finalization. External coding CLIs are not required.
-"""
+"""Native autonomous execution loop with structured tool calls and gates."""
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
-import subprocess
 import time
 from typing import Any
 
@@ -30,7 +25,7 @@ class NativeRuntimeResult:
 
 
 class NativeAgent:
-    """Provider-agnostic autonomous runtime with bounded repair."""
+    """Provider-agnostic autonomous runtime with bounded repair and tool execution."""
 
     def __init__(self, workspace: Path, model: Any | None = None, max_repair_attempts: int = 2):
         self.workspace = workspace.resolve()
@@ -41,36 +36,46 @@ class NativeAgent:
 
     async def _test(self) -> dict[str, Any]:
         started = time.monotonic()
-        commands = [("python -m pytest -q", 300), ("python -m compileall -q ma_cli", 120)]
-        failures = []
-        output = []
-        for command, timeout in commands:
-            decision = self.security.authorize_command(command, approved=True)
-            if not decision.allowed:
-                failures.append(decision.reason)
-                continue
+        failures: list[str] = []
+        output: list[str] = []
+        for command, timeout in (("python -m pytest -q", 300), ("python -m compileall -q ma_cli", 120)):
             try:
-                proc = await asyncio.to_thread(
-                    subprocess.run, command, cwd=self.workspace, shell=True,
-                    capture_output=True, text=True, timeout=timeout, check=False,
-                )
-                output.append(proc.stdout + proc.stderr)
-                if proc.returncode != 0:
-                    failures.append(f"{command}: exit {proc.returncode}")
-            except subprocess.TimeoutExpired:
-                failures.append(f"{command}: timeout")
+                result = await self.tools.execute_async("run_command", command=command,
+                                                       timeout=timeout, approved=True)
+                text = result["stdout"] + result["stderr"]
+                output.append(text)
+                if result["returncode"] != 0:
+                    failures.append(f"{command}: exit {result['returncode']}")
+            except Exception as exc:
+                failures.append(f"{command}: {exc}")
         return {"passed": not failures, "failures": failures, "output": "\n".join(output),
                 "duration_ms": int((time.monotonic() - started) * 1000)}
 
-    async def _model_step(self, prompt: str, role: TaskRole) -> str:
+    async def _model_step(self, prompt: str, role: TaskRole) -> tuple[str, list[dict[str, Any]]]:
         if self.model is None:
-            return f"{role.value} planned; no model provider attached"
+            return f"{role.value} planned; no model provider attached", []
         complete = getattr(self.model, "complete", None)
         if complete is None:
             raise TypeError("model must expose async complete(messages, ...) method")
-        response = await complete([{"role": "user", "content": prompt}], strategy=role.value,
-                                  capabilities=[])
-        return getattr(response, "content", str(response))
+        response = await complete([{
+            "role": "user",
+            "content": (
+                f"Role: {role.value}. Work autonomously on this task: {prompt}\n"
+                "Use only structured tool calls when changing or inspecting the workspace."
+            ),
+        }], strategy=role.value, capabilities=self.tools.schemas())
+        tool_results: list[dict[str, Any]] = []
+        for call in getattr(response, "tool_calls", []) or []:
+            name = call.get("name") or call.get("function", {}).get("name")
+            arguments = call.get("arguments") or call.get("function", {}).get("arguments", {})
+            if isinstance(arguments, str):
+                import json
+                arguments = json.loads(arguments)
+            if not name or not isinstance(arguments, dict):
+                raise ValueError("invalid structured tool call")
+            result = await self.tools.execute_async(name, **arguments)
+            tool_results.append({"tool": name, "result": result})
+        return getattr(response, "content", str(response)), tool_results
 
     async def run(self, prompt: str, cancellation: asyncio.Event | None = None) -> NativeRuntimeResult:
         _, graph = Planner().plan(prompt)
@@ -96,8 +101,9 @@ class NativeAgent:
                     last_error = decision.reason
             elif task.role in (TaskRole.CODER, TaskRole.RESEARCH, TaskRole.REVIEWER):
                 try:
-                    output = await self._model_step(prompt, task.role)
-                    evidence.append({"stage": task.role.value, "output": output})
+                    output, tool_results = await self._model_step(prompt, task.role)
+                    evidence.append({"stage": task.role.value, "output": output,
+                                     "tool_calls": tool_results})
                 except Exception as exc:
                     last_error = str(exc)
             elif task.role == TaskRole.FINALIZER:
@@ -114,12 +120,17 @@ class NativeAgent:
                 return NativeRuntimeResult(False, prompt, error="cancelled", attempts=attempts,
                                            task_count=len(ordered), evidence=evidence)
             attempts += 1
-            await self._model_step(f"Repair failed task for: {prompt}. Failure: {last_error}", TaskRole.CODER)
-            report = await self._test()
-            evidence.append({"stage": "repair_validation", "attempt": repair + 1, **report})
-            if report["passed"]:
-                return NativeRuntimeResult(True, prompt, output=report["output"], attempts=attempts,
-                                           task_count=len(ordered), evidence=evidence)
+            try:
+                output, tool_results = await self._model_step(
+                    f"Repair failed task for: {prompt}. Failure: {last_error}", TaskRole.CODER)
+                report = await self._test()
+                evidence.append({"stage": "repair_validation", "attempt": repair + 1,
+                                 "output": output, "tool_calls": tool_results, **report})
+                if report["passed"]:
+                    return NativeRuntimeResult(True, prompt, output=report["output"], attempts=attempts,
+                                               task_count=len(ordered), evidence=evidence)
+            except Exception as exc:
+                last_error = str(exc)
         return NativeRuntimeResult(False, prompt, error=last_error or "runtime did not converge",
                                    attempts=attempts, task_count=len(ordered), evidence=evidence)
 
