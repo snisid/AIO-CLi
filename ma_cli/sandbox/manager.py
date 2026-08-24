@@ -16,7 +16,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import docker  # type: ignore
+try:\n    import docker  # type: ignore\nexcept ImportError:  # optional dependency\n    docker = None  # type: ignore
 
 from ..core.models import HealthStatus
 from ..events.bus import EventBus
@@ -124,7 +124,7 @@ class SandboxManager:
     
     def health_check(self) -> HealthStatus:
         """Perform health check on sandbox infrastructure."""
-        if not self.is_available():
+        if docker is None:\n            raise SandboxUnavailableError("Docker Python package is not installed. Install MA-CLI with the sandbox/all extra.")\n\n        if not self.is_available():
             return HealthStatus.UNHEALTHY
         
         try:
