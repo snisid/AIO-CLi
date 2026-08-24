@@ -4,6 +4,7 @@ on:
   push:
     branches: [main, "hardening/**"]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -27,3 +28,22 @@ jobs:
       - run: python -m pip_audit
       - run: python scripts/release_gate.py
       - run: python -m build
+
+  provider-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install httpx
+      - name: Live provider verification
+        env:
+          OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
+          OMNIROUTE_BASE_URL: ${{ secrets.OMNIROUTE_BASE_URL }}
+          OMNIROUTE_API_KEY: ${{ secrets.OMNIROUTE_API_KEY }}
+          NINEROUTER_BASE_URL: ${{ secrets.NINEROUTER_BASE_URL }}
+          NINEROUTER_API_KEY: ${{ secrets.NINEROUTER_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/live_provider_verification.py
