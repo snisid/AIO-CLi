@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#00D1FF"/><stop offset=".52" stop-color="#0066FF"/><stop offset="1" stop-color="#FFD700"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="#0A0F1C"/><circle cx="256" cy="256" r="190" fill="none" stroke="url(#g)" stroke-width="18"/><path d="M112 350V145l72 82 72-82 72 82 72-82v205h-58V250l-86 95-86-95v100z" fill="url(#g)"/><path d="M150 382h72" stroke="#00D1FF" stroke-width="18" stroke-linecap="round"/><path d="M116 382l28-22 28 22-28 22z" fill="#00D1FF"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+<defs>
+ <linearGradient id="m" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFD66B"/><stop offset=".45" stop-color="#FFD700"/><stop offset="1" stop-color="#69D9FF"/></linearGradient>
+ <linearGradient id="o1" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#00D1FF"/><stop offset=".55" stop-color="#0066FF"/><stop offset="1" stop-color="#FFD700"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<circle cx="400" cy="400" r="285" fill="#07101E" stroke="#10253B" stroke-width="20"/>
+<g fill="none" stroke-linecap="round" filter="url(#glow)">
+ <path d="M112 390 C75 225 185 102 365 94 C520 87 660 170 688 302" stroke="#00CFFF" stroke-width="28"/>
+ <path d="M688 302 C735 438 645 602 486 676 C332 748 164 681 108 535" stroke="#FF8A00" stroke-width="28"/>
+ <path d="M140 280 C190 130 365 73 520 137" stroke="#009BFF" stroke-width="10" opacity=".9"/>
+</g>
+<path d="M190 560 L190 230 L310 360 L400 245 L490 360 L610 230 L610 560 L535 560 L535 410 L400 545 L265 410 L265 560 Z" fill="url(#m)" stroke="#F7E6A8" stroke-width="4"/>
+<path d="M362 540 L438 540" stroke="#00D1FF" stroke-width="20" stroke-linecap="round"/>
+<path d="M365 440 L400 412 L435 440 L400 467 Z" fill="#00D1FF"/>
+</svg>
