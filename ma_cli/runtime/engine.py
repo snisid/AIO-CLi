@@ -18,7 +18,7 @@ from .planner import PlanTask, Planner, TaskRole
 
 
 class ModelExecutor(Protocol):
-    async def complete(self, messages: list[ChatMessage], *, strategy: RoutingStrategy, capabilities: list[str]) -> Any: ...
+    async def complete(self, messages: list[ChatMessage], *, strategy: RoutingStrategy, capabilities: list[str], tools: list[dict[str, Any]] | None = None) -> Any: ...
 
 
 class RoutedModelExecutor:
@@ -28,7 +28,7 @@ class RoutedModelExecutor:
         self.router = router or ModelRouter()
         self.router.initialize()
 
-    async def complete(self, messages: list[ChatMessage], *, strategy: RoutingStrategy = RoutingStrategy.BALANCED, capabilities: list[str] | None = None):
+    async def complete(self, messages: list[ChatMessage], *, strategy: RoutingStrategy = RoutingStrategy.BALANCED, capabilities: list[str] | None = None, tools: list[dict[str, Any]] | None = None):
         capabilities = capabilities or ["chat", "code"]
         aliases = ["coding", "default", "local", "qwen", "ollama", "omniroute", "9router", "openai", "anthropic"]
         last_error = None
@@ -40,7 +40,8 @@ class RoutedModelExecutor:
                 provider = get_provider_registry().get(selected.provider_used)
                 if provider is None:
                     continue
-                return await provider.safe_chat(messages, selected.selected_model.model_id)
+                kwargs = {"tools": tools} if tools else {}
+                return await provider.safe_chat(messages, selected.selected_model.model_id, **kwargs)
             except Exception as exc:
                 last_error = str(exc)
         raise RuntimeError(last_error or "no native model provider is available")
@@ -120,11 +121,12 @@ class NativeAgent:
             "You are a native MA-CLI agent. Use structured tool calls only for actions. "
             "Never turn natural-language text into a shell command. Never claim success without evidence."
         )
-        messages = [ChatMessage("system", system), ChatMessage("user", f"Role: {role.value}\nTask: {prompt}\nAvailable tools: {json.dumps(self.tools.schemas())}")]
+        messages = [ChatMessage("system", system), ChatMessage("user", f"Role: {role.value}\nTask: {prompt}")]
+        schemas = self.tools.schemas()
         for _ in range(self.max_tool_rounds):
             if self.cancel_event.is_set():
                 raise asyncio.CancelledError()
-            response = await self.model.complete(messages, strategy=strategy, capabilities=capabilities)
+            response = await self.model.complete(messages, strategy=strategy, capabilities=capabilities, tools=schemas)
             calls = list(getattr(response, "tool_calls", None) or [])
             if not calls:
                 return response.content
