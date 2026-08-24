@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class SandboxPolicy(Enum):
     """Sandbox enforcement policy."""
+
     STRICT = "strict"  # Hard fail if sandbox unavailable
     PERMISSIVE = "permissive"  # Allow fallback (NOT RECOMMENDED)
     DISABLED = "disabled"  # No sandboxing
@@ -35,7 +36,7 @@ class SandboxPolicy(Enum):
 @dataclass
 class SandboxConfig:
     """Configuration for sandbox environment."""
-    
+
     image: str = "python:3.11-slim"
     network_enabled: bool = False
     allowed_network_hosts: list[str] = field(default_factory=list)
@@ -53,7 +54,7 @@ class SandboxConfig:
 @dataclass
 class SandboxResult:
     """Result of sandbox execution."""
-    
+
     success: bool
     exit_code: int
     stdout: str
@@ -76,19 +77,19 @@ class PolicyViolationError(Exception):
 class SandboxManager:
     """
     Manages secure sandboxed execution environments.
-    
+
     CRITICAL SECURITY FEATURE:
     - Hard-fail policy: If Docker is unavailable, tasks are ABORTED
     - Never falls back to host execution
     - Enforces network egress filtering
     - Enforces granular filesystem permissions
     """
-    
+
     def __init__(
         self,
         config: SandboxConfig | None = None,
         permission_engine: PermissionEngine | None = None,
-        event_bus: EventBus | None = None
+        event_bus: EventBus | None = None,
     ):
         self.config = config or SandboxConfig()
         self.permission_engine = permission_engine
@@ -96,7 +97,7 @@ class SandboxManager:
         self._docker_client: docker.DockerClient | None = None
         self._active_containers: dict[str, Any] = {}
         self._workspace_roots: dict[str, Path] = {}
-        
+
     @property
     def docker_client(self) -> docker.DockerClient:
         """Get Docker client, raising error if unavailable."""
@@ -112,7 +113,7 @@ class SandboxManager:
                     "Sandbox enforcement requires Docker. Task aborted."
                 )
         return self._docker_client
-    
+
     def is_available(self) -> bool:
         """Check if Docker sandbox is available."""
         try:
@@ -121,12 +122,12 @@ class SandboxManager:
             return True
         except Exception:
             return False
-    
+
     def health_check(self) -> HealthStatus:
         """Perform health check on sandbox infrastructure."""
         if not self.is_available():
             return HealthStatus.UNHEALTHY
-        
+
         try:
             # Check image availability
             if self.config.image:
@@ -134,48 +135,47 @@ class SandboxManager:
                     self.docker_client.images.get(self.config.image)
                 except Exception:
                     return HealthStatus.DEGRADED
-            
+
             return HealthStatus.HEALTHY
         except Exception as e:
             logger.warning(f"Sandbox health degraded: {e}")
             return HealthStatus.DEGRADED
-    
+
     def create_workspace(self, task_id: str) -> Path:
         """Create isolated workspace for a task."""
         workspace_root = Path(tempfile.mkdtemp(prefix=f"ma-cli-{task_id}-"))
-        
+
         # Create standard directory structure
         (workspace_root / "workspace").mkdir()
         (workspace_root / "logs").mkdir()
         (workspace_root / "tmp").mkdir()
-        
+
         self._workspace_roots[task_id] = workspace_root
-        
+
         logger.info(f"Created workspace: {workspace_root}")
         return workspace_root / "workspace"
-    
+
     def destroy_workspace(self, task_id: str) -> None:
         """Clean up workspace after task completion."""
         if task_id in self._workspace_roots:
             workspace = self._workspace_roots[task_id]
             try:
                 import shutil
+
                 shutil.rmtree(workspace.parent)
                 logger.info(f"Destroyed workspace: {workspace.parent}")
             except Exception as e:
                 logger.warning(f"Failed to cleanup workspace: {e}")
             finally:
                 del self._workspace_roots[task_id]
-    
+
     def _check_command_policy(self, command: str) -> None:
         """Validate command against sandbox policy."""
         # Check denied commands
         for denied in self.config.denied_commands:
             if denied in command:
-                raise PolicyViolationError(
-                    f"Command contains denied pattern '{denied}': {command}"
-                )
-        
+                raise PolicyViolationError(f"Command contains denied pattern '{denied}': {command}")
+
         # Check allowed commands (if specified)
         if self.config.allowed_commands:
             allowed = False
@@ -184,50 +184,40 @@ class SandboxManager:
                     allowed = True
                     break
             if not allowed:
-                raise PolicyViolationError(
-                    f"Command not in allowed list: {command}"
-                )
-    
+                raise PolicyViolationError(f"Command not in allowed list: {command}")
+
     def _build_docker_run_args(
-        self,
-        workspace_path: Path,
-        command: str,
-        network_hosts: list[str] | None = None
+        self, workspace_path: Path, command: str, network_hosts: list[str] | None = None
     ) -> dict[str, Any]:
         """Build Docker run arguments with security constraints."""
-        
+
         # Build volume mounts
-        volumes = {
-            str(workspace_path): {
-                "bind": "/workspace",
-                "mode": "rw"
-            }
-        }
-        
+        volumes = {str(workspace_path): {"bind": "/workspace", "mode": "rw"}}
+
         # Add read-only mounts
         for host_path in self.config.read_only_paths:
-            volumes[host_path] = {
-                "bind": f"/readonly/{Path(host_path).name}",
-                "mode": "ro"
-            }
-        
+            volumes[host_path] = {"bind": f"/readonly/{Path(host_path).name}", "mode": "ro"}
+
         # Build environment
         environment = {
             "MA_CLI_SANDBOX": "true",
             "WORKSPACE": "/workspace",
             "HOME": "/workspace",
         }
-        
+
         # Build network configuration
         network_mode = "none" if not self.config.network_enabled else "bridge"
-        
+
         # Build extra hosts for allowed destinations
         extra_hosts = {}
         if network_hosts:
             for host in network_hosts:
-                if host in self.config.allowed_network_hosts or not self.config.allowed_network_hosts:
+                if (
+                    host in self.config.allowed_network_hosts
+                    or not self.config.allowed_network_hosts
+                ):
                     extra_hosts[host] = "host-gateway"
-        
+
         return {
             "image": self.config.image,
             "command": command,
@@ -252,22 +242,22 @@ class SandboxManager:
             "remove": True,  # Auto-remove container
             "detach": False,
         }
-    
+
     async def execute(
         self,
         task_id: str,
         command: str,
         workspace_path: Path | None = None,
-        timeout: int | None = None
+        timeout: int | None = None,
     ) -> SandboxResult:
         """
         Execute command in sandboxed environment.
-        
+
         CRITICAL: Raises SandboxUnavailableError if Docker is not available.
         Never falls back to host execution.
         """
         start_time = datetime.utcnow()
-        
+
         # Check sandbox availability FIRST
         if not self.is_available():
             logger.critical(f"TASK {task_id}: Sandbox unavailable - ABORTING")
@@ -275,7 +265,7 @@ class SandboxManager:
                 "Docker sandbox required but unavailable. "
                 "Task aborted for security. Install Docker or disable sandbox mode."
             )
-        
+
         # Validate command against policy
         try:
             self._check_command_policy(command)
@@ -288,37 +278,33 @@ class SandboxManager:
                 stderr=str(e),
                 duration_ms=0,
                 policy_violation=True,
-                violation_details=str(e)
+                violation_details=str(e),
             )
-        
+
         # Get or create workspace
         if workspace_path is None:
             workspace_path = self.create_workspace(task_id)
-        
+
         timeout = timeout or self.config.timeout_seconds
-        
+
         try:
             # Build Docker run arguments
             run_args = self._build_docker_run_args(
                 workspace_path=workspace_path,
                 command=command,
-                network_hosts=None  # Can be extended for specific hosts
+                network_hosts=None,  # Can be extended for specific hosts
             )
-            
+
             logger.info(f"Executing in sandbox: {command[:100]}...")
-            
+
             # Run container
             container_result = await asyncio.wait_for(
-                asyncio.to_thread(
-                    self.docker_client.containers.run,
-                    **run_args
-                ),
-                timeout=timeout
+                asyncio.to_thread(self.docker_client.containers.run, **run_args), timeout=timeout
             )
-            
+
             # Parse result
             if isinstance(container_result, bytes):
-                output = container_result.decode('utf-8', errors='replace')
+                output = container_result.decode("utf-8", errors="replace")
                 stdout = output
                 stderr = ""
                 exit_code = 0
@@ -326,22 +312,21 @@ class SandboxManager:
                 # Container object (detached mode)
                 container = container_result
                 self._active_containers[task_id] = container
-                
+
                 # Wait for completion
                 try:
                     result = await asyncio.wait_for(
-                        asyncio.to_thread(container.wait, condition="not-running"),
-                        timeout=timeout
+                        asyncio.to_thread(container.wait, condition="not-running"), timeout=timeout
                     )
                     exit_code = result.get("StatusCode", 0) if isinstance(result, dict) else 0
-                    
+
                     # Get logs
                     logs = await asyncio.to_thread(container.logs)
-                    output = logs.decode('utf-8', errors='replace')
+                    output = logs.decode("utf-8", errors="replace")
                     stdout = output
                     stderr = ""
-                    
-                except asyncio.TimeoutError:
+
+                except TimeoutError:
                     logger.error(f"Container timeout for task {task_id}")
                     await asyncio.to_thread(container.stop)
                     return SandboxResult(
@@ -351,28 +336,28 @@ class SandboxManager:
                         stderr=f"Timeout after {timeout}s",
                         duration_ms=timeout * 1000,
                         container_id=container.id,
-                        error="timeout"
+                        error="timeout",
                     )
-            
+
             duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-            
+
             success = exit_code == 0
-            
+
             result = SandboxResult(
                 success=success,
                 exit_code=exit_code,
                 stdout=stdout,
                 stderr=stderr,
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
-            
+
             logger.info(
                 f"Sandbox execution {'succeeded' if success else 'failed'} "
                 f"in {duration_ms}ms with exit code {exit_code}"
             )
-            
+
             return result
-            
+
         except docker.errors.APIError as e:
             logger.error(f"Docker API error: {e}")
             return SandboxResult(
@@ -381,10 +366,10 @@ class SandboxManager:
                 stdout="",
                 stderr=f"Docker API error: {e}",
                 duration_ms=int((datetime.utcnow() - start_time).total_seconds() * 1000),
-                error=str(e)
+                error=str(e),
             )
-            
-        except asyncio.TimeoutError:
+
+        except TimeoutError:
             logger.error(f"Execution timeout after {timeout}s")
             return SandboxResult(
                 success=False,
@@ -392,9 +377,9 @@ class SandboxManager:
                 stdout="",
                 stderr=f"Timeout after {timeout}s",
                 duration_ms=timeout * 1000,
-                error="timeout"
+                error="timeout",
             )
-            
+
         except Exception as e:
             logger.exception(f"Unexpected sandbox error: {e}")
             return SandboxResult(
@@ -403,9 +388,9 @@ class SandboxManager:
                 stdout="",
                 stderr=f"Unexpected error: {e}",
                 duration_ms=int((datetime.utcnow() - start_time).total_seconds() * 1000),
-                error=str(e)
+                error=str(e),
             )
-    
+
     async def cancel(self, task_id: str) -> bool:
         """Cancel running container for task."""
         if task_id in self._active_containers:
@@ -418,15 +403,15 @@ class SandboxManager:
                 logger.error(f"Failed to cancel container: {e}")
                 return False
         return False
-    
+
     def get_network_policy_summary(self) -> dict[str, Any]:
         """Get summary of network restrictions."""
         return {
             "network_enabled": self.config.network_enabled,
             "allowed_hosts": self.config.allowed_network_hosts,
-            "default_policy": "DENY_ALL" if not self.config.network_enabled else "ALLOW_SPECIFIED"
+            "default_policy": "DENY_ALL" if not self.config.network_enabled else "ALLOW_SPECIFIED",
         }
-    
+
     def get_filesystem_policy_summary(self) -> dict[str, Any]:
         """Get summary of filesystem restrictions."""
         return {
@@ -434,5 +419,5 @@ class SandboxManager:
             "read_only_root": True,
             "read_only_paths": self.config.read_only_paths,
             "writable_paths": self.config.writable_paths,
-            "tmpfs_enabled": True
+            "tmpfs_enabled": True,
         }

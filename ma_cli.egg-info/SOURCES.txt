@@ -1,4 +1,5 @@
 README.md
+pyproject.toml
 setup.py
 ma_cli/__init__.py
 ma_cli.egg-info/PKG-INFO
