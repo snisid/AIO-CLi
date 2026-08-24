@@ -1,10 +1,4 @@
-"""Secure, policy-aware tool registry for the MA-CLI runtime.
-
-Every model-requested tool call crosses this registry. The registry performs
-schema validation, workspace/symlink boundary checks, permission/risk gates,
-timeout enforcement, output capture/validation and audit recording before a
-handler is allowed to execute.
-"""
+"""Secure, policy-aware tool registry for the MA-CLI runtime."""
 from __future__ import annotations
 
 import inspect
@@ -15,6 +9,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
+
+from ..security.runtime_policy import RuntimeSecurity
 
 
 @dataclass(frozen=True)
@@ -28,15 +24,21 @@ class ToolSpec:
 
 
 class ToolRegistry:
+    """Single security choke-point for model-requested tool execution."""
+
     def __init__(self, workspace: Path | None = None):
         self.workspace = (workspace or Path.cwd()).resolve()
+        self.security = RuntimeSecurity(self.workspace)
         self._tools: dict[str, ToolSpec] = {}
         self._audit: list[dict[str, Any]] = []
         self._lock = threading.Lock()
-        self.register(ToolSpec("read_file", "Read a UTF-8 file inside the workspace.", self.read_file, required_args=frozenset({"path"})))
-        self.register(ToolSpec("write_file", "Write a UTF-8 file inside the workspace.", self.write_file, permissions=frozenset({"write"}), required_args=frozenset({"path", "content"})))
+        self.register(ToolSpec("read_file", "Read a UTF-8 file inside the workspace.", self.read_file,
+                               required_args=frozenset({"path"})))
+        self.register(ToolSpec("write_file", "Write a UTF-8 file inside the workspace.", self.write_file,
+                               permissions=frozenset({"write"}), required_args=frozenset({"path", "content"})))
         self.register(ToolSpec("list_dir", "List a directory inside the workspace.", self.list_dir))
-        self.register(ToolSpec("run_command", "Run a command in the workspace.", self.run_command, "high", frozenset({"execute"}), frozenset({"command"})))
+        self.register(ToolSpec("run_command", "Run an approved command in the workspace.", self.run_command,
+                               "high", frozenset({"execute"}), frozenset({"command"})))
 
     def register(self, spec: ToolSpec) -> None:
         if not spec.name or not spec.name.replace("_", "").isalnum():
@@ -86,9 +88,10 @@ class ToolRegistry:
             raise TypeError("content must be a string")
 
     def _permission_check(self, spec: ToolSpec, kwargs: dict[str, Any]) -> None:
-        if spec.risk == "high" and not kwargs.get("approved", False):
-            # High-risk execution remains explicitly opt-in at the registry boundary.
-            raise PermissionError("high-risk tool requires approved=True")
+        if spec.name == "run_command":
+            decision = self.security.authorize_command(kwargs["command"], bool(kwargs.get("approved", False)))
+            if not decision.allowed:
+                raise PermissionError(decision.reason)
 
     def read_file(self, path: str) -> str:
         return self.resolve(path).read_text(encoding="utf-8")
@@ -128,8 +131,7 @@ class ToolRegistry:
         try:
             self._validate(spec, kwargs)
             self._permission_check(spec, kwargs)
-            clean_kwargs = dict(kwargs)
-            result = spec.handler(**clean_kwargs)
+            result = spec.handler(**kwargs)
             if inspect.isawaitable(result):
                 raise RuntimeError("async handlers must be invoked through execute_async")
             self._record(tool=name, risk=spec.risk, status="success",
