@@ -1,10 +1,10 @@
 """Runtime module initialization."""
 
+from .executor import Executor
 from .intent import IntentAnalyzer
+from .native_agent import NativeAgent
 from .planner import Planner
 from .task_graph import TaskGraph, TaskNode
-from .native_agent import NativeAgent
-from .executor import Executor
 
 __all__ = [
     "IntentAnalyzer",

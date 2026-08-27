@@ -23,10 +23,8 @@ import httpx
 import pytest
 
 from ma_cli.core.models import HealthStatus
-from ma_cli.providers.base import ChatMessage, ChatResponse, ModelInfo, ProviderConfig
+from ma_cli.providers.base import ChatMessage, ChatResponse, ProviderConfig
 from ma_cli.providers.circuit_breaker import (
-    CircuitBreaker,
-    CircuitConfig,
     CircuitOpenError,
     CircuitState,
 )
@@ -39,7 +37,6 @@ from ma_cli.providers.implementations import (
     OpenAIProvider,
     ProviderRegistry,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -207,7 +204,9 @@ class TestOllamaProvider:
         provider = OllamaProvider(ollama_config)
 
         mock_data = {
-            "choices": [{"message": {"content": "Hello! How can I help you?"}, "finish_reason": "stop"}],
+            "choices": [
+                {"message": {"content": "Hello! How can I help you?"}, "finish_reason": "stop"}
+            ],
             "model": "llama3.2",
             "usage": {"prompt_tokens": 10, "completion_tokens": 20},
         }
@@ -311,7 +310,9 @@ class TestOpenAIProvider:
         provider = OpenAIProvider(openai_config)
 
         mock_data = {
-            "choices": [{"message": {"content": "I'm doing well, thank you!"}, "finish_reason": "stop"}],
+            "choices": [
+                {"message": {"content": "I'm doing well, thank you!"}, "finish_reason": "stop"}
+            ],
             "model": "gpt-4o",
             "usage": {"prompt_tokens": 15, "completion_tokens": 25},
         }
@@ -481,12 +482,16 @@ class TestOmniRouteProvider:
             assert provider._routing_info == {"strategy": "cost_optimized"}
 
     @pytest.mark.asyncio
-    async def test_chat_with_routing_hints(self, omniroute_config, sample_messages, mock_http_response):
+    async def test_chat_with_routing_hints(
+        self, omniroute_config, sample_messages, mock_http_response
+    ):
         """Test chat completion with routing hints."""
         provider = OmniRouteProvider(omniroute_config)
 
         mock_data = {
-            "choices": [{"message": {"content": "Response via OmniRoute"}, "finish_reason": "stop"}],
+            "choices": [
+                {"message": {"content": "Response via OmniRoute"}, "finish_reason": "stop"}
+            ],
             "model": "gpt-4o-via-omniroute",
         }
 
