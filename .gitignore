@@ -1,72 +1,8 @@
-```
-# Dependencies
-node_modules/
-venv/
-.venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-target/
-.gradle/
+(docs/FINALIZATION_AUDIT.md is a markdown documentation file, which should not be ignored)
 
-# Build artifacts
-dist/
-build/
-*.pyc
-*.class
-*.o
-*.exe
-*.dll
-*.so
-*.a
-*.obj
-*.out
+ academic-research-skills (executable/binary file)
+ warp (executable/binary file)
 
-# Environment
-.env
-.env.local
-*.env.*
-
-# Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# System
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
-```
+# Executables/binaries
+academic-research-skills
+warp
