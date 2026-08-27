@@ -7,6 +7,11 @@ from .router import (
     RoutingStrategy,
     get_model_router,
 )
+from .intent import (
+    Intent,
+    IntentType,
+    TaskComplexity,
+)
 
 __all__ = [
     "ModelAlias",
@@ -14,4 +19,7 @@ __all__ = [
     "ModelSelectionResult",
     "RoutingStrategy",
     "get_model_router",
+    "Intent",
+    "IntentType",
+    "TaskComplexity",
 ]
