@@ -105,9 +105,9 @@ class ConfigurationEngine:
             return self._config
 
         except yaml.YAMLError as e:
-            raise ConfigurationError(f"Invalid YAML in config file: {e}")
+            raise ConfigurationError(f"Invalid YAML in config file: {e}") from e
         except Exception as e:
-            raise ConfigurationError(f"Failed to load config: {e}")
+            raise ConfigurationError(f"Failed to load config: {e}") from e
 
     def save(self, config: Config | None = None) -> None:
         """
