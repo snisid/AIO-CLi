@@ -1,34 +1,6 @@
 ```
-# Compiled Python files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Dependencies
-.venv/
-venv/
-env/
-requirements.txt.bak
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-*.swo
-
-# Environment
-.env
-.env.local
-*.env.*
-
-# Editors
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-
-# OS generated files
-.DS_Store
-Thumbs.db
 ```
