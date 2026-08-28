@@ -1,34 +1,57 @@
 ```
-# Compiled Python files
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Dependencies
-.venv/
+# Virtual environments
 venv/
 env/
-requirements.txt.bak
+ENV/
+.venv/
+.env/
 
-# Logs and temp files
-*.log
-*.tmp
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
 
-# Environment
+# Logs
+*.log
+
+# Environment variables
 .env
 .env.local
 *.env.*
 
-# Editors
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
+# Coverage
+.coverage
+coverage/
+htmlcov/
 
-# OS generated files
-.DS_Store
-Thumbs.db
+# Testing
+.pytest_cache/
+.mypy_cache/
+
+# Distribution / packaging
+*.tar.gz
+*.whl
 ```

@@ -16,6 +16,37 @@ from ..core.models import AutonomyLevel
 
 
 @dataclass
+class MCPAuthConfig:
+    """MCP authentication configuration."""
+
+    type: str = "none"  # none, bearer, api_key
+    token_env: str | None = None
+    api_key_env: str | None = None
+
+
+@dataclass
+class MCPServerConfig:
+    """Configuration for a single MCP server."""
+
+    transport: str = "stdio"  # stdio, streamable_http
+    command: str | None = None
+    args: list[str] = field(default_factory=list)
+    url: str | None = None
+    auth: MCPAuthConfig | None = None
+    enabled: bool = True
+    timeout: int = 30
+    max_retries: int = 3
+
+
+@dataclass
+class MCPConfig:
+    """MCP subsystem configuration."""
+
+    enabled: bool = True
+    servers: dict[str, MCPServerConfig] = field(default_factory=dict)
+
+
+@dataclass
 class ProviderConfig:
     """Configuration for a single provider."""
 
@@ -26,6 +57,7 @@ class ProviderConfig:
     timeout: int = 60
     retry_count: int = 3
     headers: dict[str, str] = field(default_factory=dict)
+    mcp: MCPConfig | None = None
 
 
 @dataclass
@@ -280,6 +312,36 @@ class ConfigurationEngine:
                 model_id=model_data.get("model_id"),
                 fallback=model_data.get("fallback"),
             )
+
+        # Parse MCP config if present
+        mcp_data = data.get("mcp", {})
+        if mcp_data:
+            mcp_servers = {}
+            for server_name, server_data in mcp_data.get("servers", {}).items():
+                auth_data = server_data.get("auth", {})
+                auth = MCPAuthConfig(
+                    type=auth_data.get("type", "none"),
+                    token_env=auth_data.get("token_env"),
+                    api_key_env=auth_data.get("api_key_env"),
+                ) if auth_data else None
+                mcp_servers[server_name] = MCPServerConfig(
+                    transport=server_data.get("transport", "stdio"),
+                    command=server_data.get("command"),
+                    args=server_data.get("args", []),
+                    url=server_data.get("url"),
+                    auth=auth,
+                    enabled=server_data.get("enabled", True),
+                    timeout=server_data.get("timeout", 30),
+                    max_retries=server_data.get("max_retries", 3),
+                )
+            mcp_config = MCPConfig(
+                enabled=mcp_data.get("enabled", True),
+                servers=mcp_servers,
+            )
+            # Attach MCP config to first provider for now (will be refactored)
+            if providers:
+                first_provider = list(providers.values())[0]
+                first_provider.mcp = mcp_config
 
         return Config(
             version=data.get("version", 1), runtime=runtime, providers=providers, models=models
