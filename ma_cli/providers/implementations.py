@@ -47,6 +47,7 @@ class OllamaProvider(Provider):
     """
 
     def __init__(self, config: ProviderConfig):
+        super().__init__()
         self._config = config
         self._base_url = config.base_url or "http://localhost:11434"
         self._models_cache: list[DiscoveredModel] = []
@@ -235,6 +236,7 @@ class OmniRouteProvider(Provider):
     DEFAULT_BASE_URL = "http://localhost:20128/v1"
 
     def __init__(self, config: ProviderConfig):
+        super().__init__()
         self._config = config
         self._base_url = config.base_url or self.DEFAULT_BASE_URL
         self._models_cache: list[DiscoveredModel] = []
@@ -411,6 +413,7 @@ class NineRouterProvider(Provider):
     DEFAULT_BASE_URL = "http://localhost:9000/v1"
 
     def __init__(self, config: ProviderConfig):
+        super().__init__()
         self._config = config
         self._base_url = config.base_url or self.DEFAULT_BASE_URL
         self._models_cache: list[DiscoveredModel] = []
@@ -548,6 +551,7 @@ class AnthropicProvider(Provider):
     BASE_URL = "https://api.anthropic.com"
 
     def __init__(self, config: ProviderConfig):
+        super().__init__()
         self._config = config
         self._api_key = config.api_key
         self._base_url = config.base_url or self.BASE_URL
@@ -706,6 +710,7 @@ class OpenAIProvider(Provider):
     BASE_URL = "https://api.openai.com/v1"
 
     def __init__(self, config: ProviderConfig):
+        super().__init__()
         self._config = config
         self._api_key = config.api_key
         self._base_url = config.base_url or self.BASE_URL
@@ -874,6 +879,8 @@ class GenericOpenAICompatibleProvider(Provider):
         self._config = config
         self._base_url = config.base_url
         self._models_cache: list[DiscoveredModel] = []
+        # Call parent init after setting up _config since name property depends on it
+        super().__init__()
 
     @property
     def name(self) -> str:

@@ -1,22 +1,47 @@
-# MA-CLI
+# AIO-CLI
 
-**Multi-Agent Autonomous CLI**
+**Autonomous Intelligent Operations CLI**
 
-An independent agent orchestration platform capable of planning, task decomposition, agent selection, model selection, tool selection, execution, observation, supervision, and more.
+A frontier-level multi-model coding agent platform with intelligent routing, autonomous execution, and comprehensive verification capabilities.
 
-## Overview
+## 🧠 Nouvelle Architecture
 
-MA-CLI is NOT a simple wrapper around Claude Code, Codex, Qwen CLI, or Zcode. It is an **independent Agent Orchestration Platform** that can work with or without external agents.
+AIO-CLI est maintenant un **coding agent multi-modèles extrêmement puissant, performant, autonome et résilient**, capable d'utiliser dynamiquement plusieurs LLMs et plusieurs gateways/providers selon la nature de la tâche.
+
+```
+AIO-CLI KERNEL
+     │
+     ▼
+┌────────────────────┐
+│ GLOBAL TASK ROUTER │
+└─────────┬──────────┘
+          │
+    ┌─────┼─────┬──────────┐
+    ▼     ▼     ▼          ▼
+CODING  RESEARCH  ARCHITECT  SECURITY
+AGENT   AGENT     AGENT      AGENT
+  │       │         │         │
+  ▼       ▼         ▼         ▼
+INTELLIGENT MODEL ROUTING
+  │
+  ├─ Frontier: Opus 5, Fable 5, GPT-5.6, GLM-5.3, Kimi 3
+  ├─ Heavy: DeepSeek-V4-Pro, Qwen 3.8 27B
+  ├─ Fast: GLM-5.3-Flash
+  └─ Free: minimax-m3:free, glm-5.2:free, gemma-4:free, lfm-2.5:free
+```
 
 ### Key Features
 
-- **NativeAgent**: Works locally with Ollama - no external dependencies required
-- **Multi-Agent Support**: Claude, Codex, Qwen, Zcode, and more
-- **Provider Abstraction**: Ollama, OmniRoute, 9router, Anthropic, OpenAI, etc.
-- **Model Routing**: Intelligent model selection with alias resolution
-- **Loop Engine**: Workflow execution with explicit success/failure criteria
-- **Security First**: Permission engine, sandboxing, audit logging
-- **Memory System**: Persistent, searchable memory with privacy controls
+- **9 Specialized Agents**: Coding, Architect, Research, Debugging, Security, Planning, Fast, Vision, MCP
+- **Intelligent Model Routing**: Capability-based selection with automatic fallback
+- **Multi-Gateway Support**: Ollama (local), 9Router, OmniRoute, OpenRouter
+- **Automatic Token/Quota Failover**: Bascule automatique quand les quotas sont épuisés
+- **Preemptive Switching**: Anticipe l'épuisement des tokens avant l'échec
+- **Circuit Breaker Pattern**: Protection contre les pannes en cascade
+- **Dynamic Model Scoring**: Capability × Task_Match × Reliability / (Cost + Latency)
+- **Multi-Model Code Review**: Évite qu'un modèle valide son propre code
+- **PLAN → EXECUTE → VERIFY → REPAIR Loop**: Boucle de qualité robuste
+- **Security Choke-Point**: Toutes les opérations sensibles passent par un point de contrôle central
 
 ## Quick Start
 

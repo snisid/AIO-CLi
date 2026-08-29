@@ -48,7 +48,7 @@ class TestLoopEngine:
         loops = engine.list_all()
 
         assert len(loops) == 2
-        names = [l.name for l in loops]
+        names = [loop.name for loop in loops]
         assert "loop1" in names
         assert "loop2" in names
 

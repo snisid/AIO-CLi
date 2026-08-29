@@ -11,7 +11,7 @@ Project-URL: Repository, https://github.com/snisid/AIO-CLi
 Project-URL: Issues, https://github.com/snisid/AIO-CLi/issues
 Project-URL: Changelog, https://github.com/snisid/AIO-CLi/blob/main/CHANGELOG.md
 Keywords: ai,agents,automation,cli,llm,multi-agent,orchestration,autonomous,coding,devops
-Classifier: Development Status :: 5 - Production/Stable
+Classifier: Development Status :: 3 - Alpha
 Classifier: Environment :: Console
 Classifier: Intended Audience :: Developers
 Classifier: License :: OSI Approved :: MIT License

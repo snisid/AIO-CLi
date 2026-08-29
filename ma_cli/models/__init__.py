@@ -1,5 +1,10 @@
 """Models module initialization."""
 
+from .intent import (
+    Intent,
+    IntentType,
+    TaskComplexity,
+)
 from .router import (
     ModelAlias,
     ModelRouter,
@@ -14,4 +19,7 @@ __all__ = [
     "ModelSelectionResult",
     "RoutingStrategy",
     "get_model_router",
+    "Intent",
+    "IntentType",
+    "TaskComplexity",
 ]
