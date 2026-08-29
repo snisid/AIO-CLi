@@ -1,50 +1,37 @@
-```markdown
-# Documentation and temporary files
-*.tmp
-*.log
+```
+# Dependencies
+.venv/
+venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+
+# Build artifacts
+dist/
+build/
+target/
 
 # Environment files
 .env
 .env.local
 *.env.*
 
-# Editor/IDE files
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
+*.tmp
 
-# System files
-.DS_Store
-Thumbs.db
+# Logs
+*.log
 
-# Dependencies
-node_modules/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-venv/
-.venv/
-.env/
-.venv.bak/
-env.bak/
-
-# Build outputs
-dist/
-build/
-*.egg-info/
-.tox/
-.nox/
-
-# Testing
-.coverage
+# Coverage
+coverage/
 htmlcov/
-.pytest_cache/
-.mypy_cache/
+.coverage
 
-# Compression archives
+# Compressed files
 *.zip
 *.gz
 *.tar
