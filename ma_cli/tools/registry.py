@@ -1,4 +1,4 @@
-"""Secure, policy-aware tool registry for the MA-CLI runtime."""
+"""Secure, policy-aware native tool registry and execution choke-point."""
 from __future__ import annotations
 
 import inspect
@@ -6,6 +6,7 @@ import os
 import subprocess
 import threading
 import time
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -21,6 +22,7 @@ class ToolSpec:
     risk: str = "standard"
     permissions: frozenset[str] = frozenset()
     required_args: frozenset[str] = frozenset()
+    timeout_seconds: int = 120
 
 
 class ToolRegistry:
@@ -33,16 +35,23 @@ class ToolRegistry:
         self._audit: list[dict[str, Any]] = []
         self._lock = threading.Lock()
         self.register(ToolSpec("read_file", "Read a UTF-8 file inside the workspace.", self.read_file,
-                               required_args=frozenset({"path"})))
+                               required_args=frozenset({"path"}), permissions=frozenset({"read"})))
         self.register(ToolSpec("write_file", "Write a UTF-8 file inside the workspace.", self.write_file,
                                permissions=frozenset({"write"}), required_args=frozenset({"path", "content"})))
-        self.register(ToolSpec("list_dir", "List a directory inside the workspace.", self.list_dir))
+        self.register(ToolSpec("list_dir", "List a directory inside the workspace.", self.list_dir,
+                               permissions=frozenset({"read"})))
+        self.register(ToolSpec("search_text", "Search text recursively inside the workspace.", self.search_text,
+                               permissions=frozenset({"read"}), required_args=frozenset({"query"})))
+        self.register(ToolSpec("apply_patch", "Apply a unified diff limited to workspace files.", self.apply_patch,
+                               permissions=frozenset({"write"}), required_args=frozenset({"patch"})))
         self.register(ToolSpec("run_command", "Run an approved command in the workspace.", self.run_command,
-                               "high", frozenset({"execute"}), frozenset({"command"})))
+                               "high", frozenset({"execute"}), frozenset({"command"}), 900))
 
     def register(self, spec: ToolSpec) -> None:
         if not spec.name or not spec.name.replace("_", "").isalnum():
             raise ValueError("invalid tool name")
+        if spec.name in self._tools:
+            raise ValueError(f"tool already registered: {spec.name}")
         self._tools[spec.name] = spec
 
     def list(self) -> list[ToolSpec]:
@@ -53,19 +62,11 @@ class ToolRegistry:
 
     def schemas(self) -> list[dict[str, Any]]:
         return [{"name": s.name, "description": s.description, "risk": s.risk,
-                 "permissions": sorted(s.permissions), "required_args": sorted(s.required_args)}
-                for s in self.list()]
+                 "permissions": sorted(s.permissions), "required_args": sorted(s.required_args),
+                 "timeout_seconds": s.timeout_seconds} for s in self.list()]
 
     def resolve(self, path: str) -> Path:
-        if not isinstance(path, str) or not path.strip():
-            raise ValueError("path must be a non-empty string")
-        raw = Path(path)
-        target = (raw if raw.is_absolute() else self.workspace / raw).resolve()
-        try:
-            target.relative_to(self.workspace)
-        except ValueError as exc:
-            raise PermissionError(f"path escapes workspace: {path}") from exc
-        return target
+        return self.security.resolve_workspace_path(path)
 
     def _record(self, **entry: Any) -> None:
         with self._lock:
@@ -80,7 +81,7 @@ class ToolRegistry:
         missing = spec.required_args - kwargs.keys()
         if missing:
             raise ValueError(f"missing required arguments: {sorted(missing)}")
-        if spec.name == "run_command" and not isinstance(kwargs.get("command"), str):
+        if spec.name in {"run_command"} and not isinstance(kwargs.get("command"), str):
             raise TypeError("command must be a string")
         if "path" in kwargs and not isinstance(kwargs["path"], str):
             raise TypeError("path must be a string")
@@ -103,7 +104,40 @@ class ToolRegistry:
         return str(target)
 
     def list_dir(self, path: str = ".") -> list[str]:
-        return [p.name for p in self.resolve(path).iterdir()]
+        return sorted(p.name for p in self.resolve(path).iterdir())
+
+    def search_text(self, query: str, path: str = ".", max_results: int = 100) -> list[dict[str, Any]]:
+        if not query:
+            raise ValueError("query cannot be empty")
+        root = self.resolve(path)
+        results: list[dict[str, Any]] = []
+        for file in root.rglob("*"):
+            if not file.is_file() or file.is_symlink():
+                continue
+            try:
+                text = file.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for lineno, line in enumerate(text.splitlines(), 1):
+                if query.casefold() in line.casefold():
+                    results.append({"path": str(file.relative_to(self.workspace)), "line": lineno, "text": line[:500]})
+                    if len(results) >= max(1, min(max_results, 1000)):
+                        return results
+        return results
+
+    def apply_patch(self, patch: str) -> dict[str, Any]:
+        """Apply a standard unified diff using the local git executable.
+
+        Git is invoked without a shell; policy still controls the operation.
+        """
+        if not patch.strip():
+            raise ValueError("patch cannot be empty")
+        decision = self.security.authorize_command("git apply --whitespace=nowarn", approved=True)
+        if not decision.allowed:
+            raise PermissionError(decision.reason)
+        proc = subprocess.run(["git", "apply", "--whitespace=nowarn", "-"], cwd=self.workspace,
+                              input=patch, text=True, capture_output=True, timeout=120, shell=False)
+        return {"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
 
     def run_command(self, command: str, timeout: int = 120, approved: bool = False) -> dict[str, Any]:
         if not command.strip():
@@ -121,6 +155,15 @@ class ToolRegistry:
     async def execute_async(self, name: str, **kwargs: Any) -> Any:
         import asyncio
         return await asyncio.to_thread(self.execute, name, **kwargs)
+
+    async def execute_many(self, calls: list[dict[str, Any]], max_concurrency: int = 4) -> list[Any]:
+        """Execute independent tool calls concurrently with bounded fan-out."""
+        import asyncio
+        semaphore = asyncio.Semaphore(max(1, min(max_concurrency, 16)))
+        async def one(call: dict[str, Any]) -> Any:
+            async with semaphore:
+                return await self.execute_async(call["name"], **call.get("arguments", {}))
+        return await asyncio.gather(*(one(c) for c in calls), return_exceptions=True)
 
     def execute(self, name: str, **kwargs: Any) -> Any:
         started = time.monotonic()
