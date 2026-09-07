@@ -59,7 +59,8 @@ class NativeAgent:
                 "duration_ms": int((time.monotonic() - started) * 1000)}
 
     async def _model_step(self, prompt: str, role: TaskRole) -> tuple[str, list[dict[str, Any]]]:
-        request = self.negotiator.request_for(role.value, complexity=5 if role == TaskRole.CODER else 3)
+        complexity = 5 if role == TaskRole.CODER else 4 if role in (TaskRole.RESEARCH, TaskRole.REVIEWER) else 3
+        request = self.negotiator.request_for(role.value, complexity=complexity)
         if self.model is None:
             return f"{role.value} planned; no model provider attached", []
         profile = getattr(self.model, "capability_profile", None)
@@ -70,24 +71,36 @@ class NativeAgent:
         complete = getattr(self.model, "complete", None)
         if complete is None:
             raise TypeError("model must expose async complete(messages, ...) method")
-        response = await complete([{"role": "user", "content": (
-            f"Role: {role.value}. Work autonomously on this task: {prompt}\n"
-            "Use only structured tool calls when changing or inspecting the workspace."
-        )}], strategy=role.value, capabilities=self.tools.schemas())
+        task_type = {
+            TaskRole.CODER: "coding",
+            TaskRole.RESEARCH: "research",
+            TaskRole.REVIEWER: "architecture",
+            TaskRole.TESTER: "testing",
+            TaskRole.SECURITY: "security",
+            TaskRole.FINALIZER: "testing",
+        }.get(role, "coding")
+        response = await complete(
+            [{"role": "user", "content": (
+                f"Role: {role.value}. Work autonomously on this task: {prompt}\n"
+                "Use only structured tool calls when changing or inspecting the workspace."
+            )}],
+            task_type=task_type,
+            complexity=complexity,
+            risk=2 if role == TaskRole.SECURITY else 1,
+            tools=self.tools.schemas(),
+        )
         tool_results: list[dict[str, Any]] = []
         calls = getattr(response, "tool_calls", []) or []
-        if calls:
-            tool_results = [{"tool": call.get("name") or call.get("function", {}).get("name")} for call in calls]
-            for call in calls:
-                name = call.get("name") or call.get("function", {}).get("name")
-                arguments = call.get("arguments") or call.get("function", {}).get("arguments", {})
-                if isinstance(arguments, str):
-                    import json
-                    arguments = json.loads(arguments)
-                if not name or not isinstance(arguments, dict):
-                    raise ValueError("invalid structured tool call")
-                result = await self.tools.execute_async(name, **arguments)
-                tool_results[-1 if len(tool_results) == 1 else 0]["result"] = result
+        for call in calls:
+            name = call.get("name") or call.get("function", {}).get("name")
+            arguments = call.get("arguments") or call.get("function", {}).get("arguments", {})
+            if isinstance(arguments, str):
+                import json
+                arguments = json.loads(arguments)
+            if not name or not isinstance(arguments, dict):
+                raise ValueError("invalid structured tool call")
+            result = await self.tools.execute_async(name, **arguments)
+            tool_results.append({"tool": name, "result": result})
         return getattr(response, "content", str(response)), tool_results
 
     async def run(self, prompt: str, cancellation: asyncio.Event | None = None,
