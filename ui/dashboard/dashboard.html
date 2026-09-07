@@ -3,71 +3,82 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="AIO-CLi autonomous coding runtime dashboard">
-  <title>AIO-CLi Dashboard</title>
+  <meta name="description" content="AIO-CLi desktop-style multi-panel workspace">
+  <title>AIO-CLi Workspace</title>
   <link rel="stylesheet" href="/ui/dashboard/dashboard.css">
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <img src="/assets/logo/ma-cli-animated.svg" alt="AIO-CLi">
-        <div><strong>AIO-CLi</strong><span>Autonomous Runtime</span></div>
+  <div class="desktop-shell">
+    <header class="topbar">
+      <div class="brand"><img src="/assets/logo/ma-cli-animated.svg" alt="AIO-CLi"><div><strong>AIO-CLi</strong><span>Autonomous coding workspace</span></div></div>
+      <div class="toolbar">
+        <button class="tool-btn" id="layout-toggle" title="Basculer entre interface unifiée et 3 panneaux">▦ <span>3 panneaux</span></button>
+        <button class="tool-btn" id="detach-all" title="Ouvrir Prompt, Code et Hub dans 3 fenêtres">⧉ <span>3 écrans</span></button>
+        <button class="tool-btn" data-modal="plugins">◈ <span>Plugins</span></button>
+        <button class="tool-btn" data-modal="settings">⚙ <span>Paramètres</span></button>
+        <div class="status-pill" id="global-status"><span></span>Connexion…</div>
       </div>
-      <nav>
-        <a class="active" href="/dashboard">Dashboard</a>
-        <a href="#runtime">Runtime</a>
-        <a href="#agents">Agents</a>
-        <a href="#providers">Providers</a>
-        <a href="#health">Health</a>
-      </nav>
-      <div class="sidebar-footer">Vercel deployment</div>
-    </aside>
+    </header>
 
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">CONTROL CENTER</p>
-          <h1>AIO-CLi Dashboard</h1>
-          <p class="muted">Native multi-agent runtime status and capability overview.</p>
-        </div>
-        <div class="status-pill" id="global-status"><span></span>Checking runtime…</div>
-      </header>
+    <div class="workspace">
+      <aside class="left-rail">
+        <button class="rail-btn active" data-panel="prompt" title="Prompt">✦</button>
+        <button class="rail-btn" data-panel="code" title="Code">⌘</button>
+        <button class="rail-btn" data-panel="hub" title="Hub">◉</button>
+        <div class="rail-spacer"></div>
+        <button class="rail-btn" data-modal="settings" title="Paramètres">⚙</button>
+      </aside>
 
-      <section class="metrics" id="runtime">
-        <article class="card metric"><span>Runtime</span><strong id="metric-runtime">—</strong><small>API availability</small></article>
-        <article class="card metric"><span>Deployment</span><strong id="metric-deployment">—</strong><small>Current platform</small></article>
-        <article class="card metric"><span>Agents</span><strong>6</strong><small>Planner → Finalizer</small></article>
-        <article class="card metric"><span>Capabilities</span><strong>17</strong><small>Native capability layer</small></article>
-      </section>
-
-      <section class="grid-two" id="agents">
-        <article class="card">
-          <div class="section-head"><h2>Agent pipeline</h2><span class="tag">ACTIVE</span></div>
-          <div class="pipeline">
-            <div>Intent Analyzer</div><div>Planner</div><div>Coder</div><div>Tester</div><div>Security</div><div>Finalizer</div>
+      <main class="panels" id="panels">
+        <section class="panel prompt-panel" data-role="prompt">
+          <div class="panel-header"><div><span class="eyebrow">01 · PROMPT</span><h1>Nouvelle tâche</h1></div><button class="icon-btn" data-modal="settings">⚙</button></div>
+          <div class="context-row"><span class="context-chip">Projet : AIO-CLi</span><span class="context-chip" id="mode-chip">Mode : Supervised</span><span class="context-chip" id="model-chip">Router : Intelligent</span></div>
+          <div class="prompt-body">
+            <textarea id="prompt-input" placeholder="Décris ce que AIO-CLi doit construire, corriger, rechercher ou vérifier…"></textarea>
+            <div class="prompt-actions"><div class="hint">Entrée pour exécuter · Shift+Entrée pour nouvelle ligne</div><button id="run-task" class="primary-btn">Lancer <span>▶</span></button></div>
           </div>
-        </article>
-        <article class="card" id="health">
-          <div class="section-head"><h2>System health</h2><span class="tag" id="health-tag">CHECKING</span></div>
-          <div class="health-row"><span>FastAPI entrypoint</span><strong id="health-api">—</strong></div>
-          <div class="health-row"><span>Static assets</span><strong id="health-assets">—</strong></div>
-          <div class="health-row"><span>Dashboard route</span><strong id="health-dashboard">—</strong></div>
-        </article>
-      </section>
+          <div class="prompt-options"><button class="soft-btn" data-modal="settings">▣ Contexte</button><button class="soft-btn" data-modal="plugins">◈ Outils</button><button class="soft-btn" id="clear-prompt">Effacer</button></div>
+          <div class="history"><div class="subhead"><span>Activité récente</span><button id="clear-history" class="link-btn">Effacer</button></div><div id="history-list" class="history-list"><div class="empty">Aucune tâche locale.</div></div></div>
+        </section>
 
-      <section class="card" id="providers">
-        <div class="section-head"><h2>Provider layer</h2><span class="muted">Credentials remain server-side / local</span></div>
-        <div class="providers">
-          <div><strong>OpenRouter</strong><span>Intelligent model routing</span></div>
-          <div><strong>OmniRoute</strong><span>Local OpenAI-compatible gateway</span></div>
-          <div><strong>9router</strong><span>Local provider aggregation</span></div>
-          <div><strong>Ollama</strong><span>Local model execution</span></div>
-        </div>
-      </section>
+        <section class="panel code-panel" data-role="code">
+          <div class="panel-header"><div><span class="eyebrow">02 · CODE</span><h1>Éditeur</h1></div><div class="code-actions"><button class="icon-btn" id="format-code">⌘F</button><button class="icon-btn" id="save-code">💾</button></div></div>
+          <div class="file-tabs"><button class="file-tab active">app.py <span>•</span></button><button class="file-tab">dashboard.html</button><button class="file-tab">runtime.py</button></div>
+          <div class="editor-wrap"><div class="line-numbers" id="line-numbers"></div><textarea id="code-editor" spellcheck="false">from fastapi import FastAPI\n\napp = FastAPI(title="AIO-CLi")\n\n@app.get("/health")\nasync def health():\n    return {"status": "ok"}\n\n# Native runtime: planner → agents → router → tools → validation</textarea></div>
+          <div class="editor-footer"><span id="cursor-info">Ln 1, Col 1</span><span id="save-state">Local workspace</span></div>
+        </section>
 
-      <footer>© AIO-CLi · Native autonomous development runtime</footer>
-    </main>
+        <section class="panel hub-panel" data-role="hub">
+          <div class="panel-header"><div><span class="eyebrow">03 · HUB</span><h1>Control Hub</h1></div><span class="tag" id="hub-status">READY</span></div>
+          <div class="hub-grid">
+            <article class="hub-card wide"><div class="subhead"><span>Exécution</span><span id="execution-state">IDLE</span></div><div class="progress"><span id="progress-bar"></span></div><div class="pipeline"><div>Intent</div><div>Planner</div><div>Coder</div><div>Tester</div><div>Security</div><div>Finalizer</div></div></article>
+            <article class="hub-card"><div class="subhead"><span>Providers</span><button class="link-btn" data-modal="settings">Configurer</button></div><div class="provider-list"><div><b>OpenRouter</b><span id="provider-openrouter">Configured</span></div><div><b>OmniRoute</b><span>Local</span></div><div><b>9router</b><span>Local</span></div><div><b>Ollama</b><span>Local</span></div></div></article>
+            <article class="hub-card"><div class="subhead"><span>Agents</span><span>6 actifs</span></div><div class="agent-list"><div><i></i>Coder <span>ready</span></div><div><i></i>Tester <span>ready</span></div><div><i></i>Research <span>ready</span></div><div><i></i>Security <span>ready</span></div><div><i></i>Reviewer <span>ready</span></div><div><i></i>Finalizer <span>ready</span></div></div></article>
+          </div>
+          <div class="hub-log"><div class="subhead"><span>Journal runtime</span><span id="runtime-clock">--:--:--</span></div><div id="runtime-log"><div><span>•</span> Runtime initialisé</div><div><span>•</span> Capability engine chargé</div><div><span>•</span> Intelligent router prêt</div></div></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <section class="modal" id="settings-modal" data-modal-panel="settings" hidden>
+      <div class="modal-head"><div><span class="eyebrow">CONFIGURATION</span><h2>Paramètres AIO-CLi</h2></div><button class="icon-btn" data-close-modal>×</button></div>
+      <div class="settings-grid">
+        <label>Mode d'exécution<select id="setting-mode"><option>Interactive</option><option selected>Supervised</option><option>Autonomous</option><option>Read-only</option></select></label>
+        <label>Routeur<select id="setting-router"><option selected>Intelligent</option><option>OpenRouter</option><option>OmniRoute</option><option>9router</option><option>Ollama</option></select></label>
+        <label>Raisonnement<select id="setting-reasoning"><option>Fast</option><option>Medium</option><option selected>High</option><option>Max</option></select></label>
+        <label>Approbation shell<select id="setting-shell"><option selected>Demander avant exécution</option><option>Toujours autoriser</option><option>Toujours bloquer</option></select></label>
+      </div>
+      <div class="setting-checks"><label><input id="setting-failover" type="checkbox" checked> Failover automatique</label><label><input id="setting-browser" type="checkbox" checked> Browser / Computer Use</label><label><input id="setting-mcp" type="checkbox" checked> MCP natif</label><label><input id="setting-longrun" type="checkbox" checked> Long-running / checkpoints</label></div>
+      <div class="modal-foot"><span id="settings-saved">Paramètres stockés localement</span><button class="primary-btn" id="save-settings">Enregistrer</button></div>
+    </section>
+
+    <section class="modal" id="plugins-modal" data-modal-panel="plugins" hidden>
+      <div class="modal-head"><div><span class="eyebrow">EXTENSIONS</span><h2>Plugins & outils</h2></div><button class="icon-btn" data-close-modal>×</button></div>
+      <div class="plugin-list"><label><input type="checkbox" checked> MCP Servers <span>Tools · Resources · Prompts</span></label><label><input type="checkbox" checked> Browser Engine <span>Playwright · navigation · screenshots</span></label><label><input type="checkbox" checked> Git Integration <span>status · diff · branches · commits</span></label><label><input type="checkbox" checked> File Intelligence <span>search · context · artifacts</span></label><label><input type="checkbox" checked> Security Choke Point <span>RBAC · approval · audit</span></label><label><input type="checkbox"> External skills <span>Optional repository integrations</span></label></div>
+      <div class="modal-foot"><span>Les plugins sont des capacités contrôlées par le runtime.</span><button class="primary-btn" data-close-modal>Terminé</button></div>
+    </section>
   </div>
   <script src="/ui/dashboard/dashboard.js"></script>
 </body>
