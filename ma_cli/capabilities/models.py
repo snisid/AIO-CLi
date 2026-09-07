@@ -70,7 +70,7 @@ class CapabilityProfile:
         return set(required).issubset(self.capabilities)
 
 
-@dataclass(frozen=True)
+@dataclass
 class TaskCapabilityRequest:
     """Normalized requirements extracted from an agent task."""
     required: FrozenSet[Capability] = frozenset()
