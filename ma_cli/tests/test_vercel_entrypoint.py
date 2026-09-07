@@ -7,13 +7,28 @@ from app import app
 
 
 @pytest.mark.asyncio
-async def test_vercel_entrypoint_health_and_status() -> None:
+async def test_vercel_entrypoint_and_dashboard() -> None:
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        responses = await client.get("/")
+        dashboard = await client.get("/dashboard")
         health = await client.get("/health")
         status = await client.get("/api/status")
+        css = await client.get("/ui/dashboard/dashboard.css")
+        js = await client.get("/ui/dashboard/dashboard.js")
+        logo = await client.get("/assets/logo/ma-cli-animated.svg")
 
+    assert responses.status_code == 200
+    assert dashboard.status_code == 200
+    assert "AIO-CLi Dashboard" in dashboard.text
     assert health.status_code == 200
     assert health.json() == {"status": "ok", "service": "aio-cli"}
     assert status.status_code == 200
     assert status.json()["runtime"] == "online"
+    assert status.json()["dashboard"] == "/dashboard"
+    assert css.status_code == 200
+    assert "app-shell" in css.text
+    assert js.status_code == 200
+    assert "checkRuntime" in js.text
+    assert logo.status_code == 200
+    assert "<svg" in logo.text
