@@ -33,6 +33,13 @@ class ModelAlias:
     provider: str
     model_id: str | None = None  # None means auto-discover
     fallback: str | None = None
+    capabilities_required: list[str] = None
+    max_cost_per_token: float = 0.0
+    privacy_required: bool = False
+    
+    def __post_init__(self):
+        if self.capabilities_required is None:
+            self.capabilities_required = []
 
 
 @dataclass

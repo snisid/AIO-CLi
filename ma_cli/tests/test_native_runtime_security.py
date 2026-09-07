@@ -31,8 +31,9 @@ def test_runtime_security_blocks_destructive_command(tmp_path: Path):
 
 def test_registry_requires_approval_for_high_risk(tmp_path: Path):
     registry = ToolRegistry(tmp_path)
+    # Use a high-risk command that requires approval (git push is classified as high risk)
     with pytest.raises(PermissionError):
-        registry.execute("run_command", command="python --version")
+        registry.execute("run_command", command="git push origin main")
 
 
 def test_registry_records_audit_for_approved_command(tmp_path: Path):
