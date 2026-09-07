@@ -1,0 +1,21 @@
+# Vercel web deployment: keep the serverless function lean.
+# The full AIO-CLi runtime and third-party integrations remain in GitHub
+# but are not required by the lightweight FastAPI web entrypoint.
+
+external/
+ma_cli/tests/
+docs/
+installer/
+.github/
+.gitmodules
+CONTRIBUTING.md
+CHANGELOG.md
+README.md
+setup.py
+
+# Local/build artifacts
+*.log
+coverage/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
