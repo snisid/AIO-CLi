@@ -1,6 +1,7 @@
-"""Secure, policy-aware native tool registry and execution choke-point."""
+"""Secure native tool registry and execution choke-point."""
 from __future__ import annotations
 
+import asyncio
 import inspect
 import os
 import subprocess
@@ -10,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from ..browser import BrowserEngine
+from ..mcp import MCPClient
 from ..security.runtime_policy import RuntimeSecurity
 
 
@@ -27,9 +30,12 @@ class ToolSpec:
 class ToolRegistry:
     """Single security choke-point for model-requested tool execution."""
 
-    def __init__(self, workspace: Path | None = None):
+    def __init__(self, workspace: Path | None = None, *, browser: BrowserEngine | None = None,
+                 mcp_clients: dict[str, MCPClient] | None = None):
         self.workspace = (workspace or Path.cwd()).resolve()
         self.security = RuntimeSecurity(self.workspace)
+        self.browser = browser
+        self.mcp_clients = mcp_clients or {}
         self._tools: dict[str, ToolSpec] = {}
         self._audit: list[dict[str, Any]] = []
         self._lock = threading.Lock()
@@ -45,6 +51,20 @@ class ToolRegistry:
                                permissions=frozenset({"write"}), required_args=frozenset({"patch"})))
         self.register(ToolSpec("run_command", "Run an explicitly approved command in the workspace.", self.run_command,
                                "high", frozenset({"execute"}), frozenset({"command"}), 900))
+        self.register(ToolSpec("browser_navigate", "Navigate the controlled browser to an approved URL.", self.browser_navigate,
+                               "external", frozenset({"network", "external"}), frozenset({"url"}), 60))
+        self.register(ToolSpec("browser_snapshot", "Read the current controlled browser page.", self.browser_snapshot,
+                               "external", frozenset({"network"}), frozenset(), 60))
+        self.register(ToolSpec("browser_screenshot", "Capture the current controlled browser page.", self.browser_screenshot,
+                               "external", frozenset({"network"}), frozenset(), 60))
+        self.register(ToolSpec("browser_click", "Click an element in the controlled browser.", self.browser_click,
+                               "external", frozenset({"network"}), frozenset({"selector"}), 60))
+        self.register(ToolSpec("browser_type", "Type into an element in the controlled browser.", self.browser_type,
+                               "external", frozenset({"network"}), frozenset({"selector", "text"}), 60))
+        self.register(ToolSpec("browser_press", "Press a key in the controlled browser.", self.browser_press,
+                               "external", frozenset({"network"}), frozenset({"selector", "key"}), 60))
+        self.register(ToolSpec("mcp_call", "Call a validated tool exposed by an MCP server.", self.mcp_call,
+                               "external", frozenset({"external"}), frozenset({"server", "tool"}), 120))
 
     def register(self, spec: ToolSpec) -> None:
         if not spec.name or not spec.name.replace("_", "").isalnum():
@@ -82,10 +102,9 @@ class ToolRegistry:
             raise ValueError(f"missing required arguments: {sorted(missing)}")
         if spec.name == "run_command" and not isinstance(kwargs.get("command"), str):
             raise TypeError("command must be a string")
-        if "path" in kwargs and not isinstance(kwargs["path"], str):
-            raise TypeError("path must be a string")
-        if "content" in kwargs and not isinstance(kwargs["content"], str):
-            raise TypeError("content must be a string")
+        for key in ("path", "content", "url", "selector", "text", "key", "server", "tool"):
+            if key in kwargs and not isinstance(kwargs[key], str):
+                raise TypeError(f"{key} must be a string")
 
     def _permission_check(self, spec: ToolSpec, kwargs: dict[str, Any]) -> None:
         if spec.name == "run_command":
@@ -94,6 +113,8 @@ class ToolRegistry:
             decision = self.security.authorize_command(kwargs["command"], approved=True)
             if not decision.allowed:
                 raise PermissionError(decision.reason)
+        elif spec.risk == "external" and not bool(kwargs.get("approved", False)):
+            raise PermissionError(f"explicit approval required for external tool '{spec.name}'")
 
     def read_file(self, path: str) -> str:
         return self.resolve(path).read_text(encoding="utf-8")
@@ -151,12 +172,65 @@ class ToolRegistry:
         except subprocess.TimeoutExpired as exc:
             return {"returncode": -1, "stdout": exc.stdout or "", "stderr": "command timed out"}
 
+    def _require_browser(self) -> BrowserEngine:
+        if self.browser is None:
+            self.browser = BrowserEngine()
+        return self.browser
+
+    async def browser_navigate(self, url: str, approved: bool = False) -> dict[str, object]:
+        browser = self._require_browser()
+        await browser.start()
+        return await browser.navigate(url)
+
+    async def browser_snapshot(self, approved: bool = False) -> dict[str, object]:
+        return await self._require_browser().snapshot()
+
+    async def browser_screenshot(self, path: str | None = None, approved: bool = False) -> dict[str, object]:
+        data = await self._require_browser().screenshot(path)
+        return {"bytes": len(data), "path": path}
+
+    async def browser_click(self, selector: str, approved: bool = False) -> dict[str, object]:
+        await self._require_browser().click(selector)
+        return {"selector": selector, "status": "clicked"}
+
+    async def browser_type(self, selector: str, text: str, approved: bool = False) -> dict[str, object]:
+        await self._require_browser().type_text(selector, text)
+        return {"selector": selector, "status": "typed"}
+
+    async def browser_press(self, selector: str, key: str, approved: bool = False) -> dict[str, object]:
+        await self._require_browser().press(selector, key)
+        return {"selector": selector, "key": key, "status": "pressed"}
+
+    async def mcp_call(self, server: str, tool: str, arguments: dict[str, Any] | None = None,
+                       approved: bool = False) -> dict[str, Any]:
+        client = self.mcp_clients.get(server)
+        if client is None:
+            raise KeyError(f"unknown MCP server: {server}")
+        if not client.connected:
+            await client.connect()
+        result = await client.call_tool(tool, arguments or {})
+        return result
+
     async def execute_async(self, name: str, **kwargs: Any) -> Any:
-        import asyncio
-        return await asyncio.to_thread(self.execute, name, **kwargs)
+        spec = self.get(name)
+        if spec is None:
+            raise KeyError(f"unknown tool: {name}")
+        self._validate(spec, kwargs)
+        self._permission_check(spec, kwargs)
+        started = time.monotonic()
+        try:
+            result = spec.handler(**kwargs)
+            if inspect.isawaitable(result):
+                result = await asyncio.wait_for(result, timeout=max(1, spec.timeout_seconds))
+            self._record(tool=name, risk=spec.risk, status="success",
+                         duration_ms=int((time.monotonic() - started) * 1000))
+            return result
+        except Exception as exc:
+            self._record(tool=name, risk=spec.risk, status="failed", error=str(exc),
+                         duration_ms=int((time.monotonic() - started) * 1000))
+            raise
 
     async def execute_many(self, calls: list[dict[str, Any]], max_concurrency: int = 4) -> list[Any]:
-        import asyncio
         semaphore = asyncio.Semaphore(max(1, min(max_concurrency, 16)))
         async def one(call: dict[str, Any]) -> Any:
             async with semaphore:
@@ -164,11 +238,13 @@ class ToolRegistry:
         return await asyncio.gather(*(one(c) for c in calls), return_exceptions=True)
 
     def execute(self, name: str, **kwargs: Any) -> Any:
-        started = time.monotonic()
         spec = self.get(name)
         if spec is None:
             self._record(tool=name, status="failed", error="unknown tool")
             raise KeyError(f"unknown tool: {name}")
+        if inspect.iscoroutinefunction(spec.handler):
+            raise RuntimeError("async tool handlers must be invoked through execute_async")
+        started = time.monotonic()
         try:
             self._validate(spec, kwargs)
             self._permission_check(spec, kwargs)
