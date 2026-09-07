@@ -125,7 +125,7 @@ class LoopResult:
 
 
 class LoopEngine:
-    """Executes registered workflows with real step dispatch and bounded repair."""
+    """Execute registered workflows through an explicit real step executor."""
 
     def __init__(self, step_executor: Callable[..., Any] | None = None):
         self._loops: dict[str, Loop] = {}
@@ -135,6 +135,9 @@ class LoopEngine:
     def register(self, loop: Loop) -> None:
         self._loops[loop.name] = loop
 
+    # Backward-compatible API used by the CLI.
+    register_loop = register
+
     def get(self, name: str) -> Loop | None:
         return self._loops.get(name)
 
@@ -143,17 +146,17 @@ class LoopEngine:
 
     async def _execute_step(self, step: LoopStep, state: LoopState, context: Any | None) -> Any:
         executor = self.step_executor or (context.get("step_executor") if isinstance(context, dict) else None)
+        if executor is None and isinstance(context, dict):
+            executor = context.get("run_step")
         if executor is None:
-            state.outputs[step.name] = {
-                "status": "completed",
-                "description": step.description,
-                "agent": step.agent,
-                "model": step.model,
-            }
-            return state.outputs[step.name]
+            raise RuntimeError(
+                f"loop step '{step.name}' has no executor; refusing to report a fake completion"
+            )
         result = executor(step, state, context)
         if inspect.isawaitable(result):
             result = await asyncio.wait_for(result, timeout=max(1, step.timeout_seconds))
+        if result is None:
+            raise RuntimeError(f"loop step '{step.name}' returned no execution result")
         state.outputs[step.name] = result
         return result
 
@@ -162,13 +165,22 @@ class LoopEngine:
             return False
         if not loop.steps:
             return True
+        if not all(step.name in state.outputs for step in loop.steps):
+            return False
         for criteria in loop.failure_criteria:
-            if state.outputs.get(criteria) in (False, None):
+            value = state.outputs.get(criteria)
+            if value is False or (isinstance(value, dict) and value.get("success") is False):
                 return False
-        if not loop.success_criteria:
-            return all(step.name in state.outputs for step in loop.steps)
+        # Explicit criteria are validated when their output keys exist. When a
+        # workflow exposes only step results, successful completion of every
+        # step is the authoritative criterion.
         for criteria in loop.success_criteria:
-            if criteria in state.outputs and state.outputs[criteria] not in (True, "ok", "passed", "completed"):
+            if criteria not in state.outputs:
+                continue
+            value = state.outputs[criteria]
+            if value not in (True, "ok", "passed", "completed") and not (
+                isinstance(value, dict) and value.get("success") is True
+            ):
                 return False
         return True
 
@@ -192,6 +204,9 @@ class LoopEngine:
                     try:
                         await self._execute_step(step, state, context)
                         break
+                    except asyncio.CancelledError:
+                        state.status = LoopStatus.CANCELLED
+                        raise
                     except Exception as exc:  # noqa: BLE001 - loop boundary captures step failures
                         error_type = type(exc).__name__
                         if not loop.retry_policy or not loop.retry_policy.should_retry(error_type, attempts):
@@ -203,10 +218,15 @@ class LoopEngine:
                         await asyncio.sleep(loop.retry_policy.get_delay(attempts - 1))
                 if state.status == LoopStatus.FAILED:
                     break
-            if state.status != LoopStatus.FAILED:
+            if state.status == LoopStatus.RUNNING:
                 state.status = LoopStatus.COMPLETED if self._evaluate_success(loop, state) else LoopStatus.FAILED
             success = state.status == LoopStatus.COMPLETED
+            completed = sum(1 for step in loop.steps if step.name in state.outputs)
             return LoopResult(success, state.outputs, state, (time.monotonic() - started) * 1000,
-                              state.current_step + (1 if success and loop.steps else 0), len(loop.steps))
+                              completed, len(loop.steps))
         finally:
             self._running.pop(loop_name, None)
+
+
+# Historical name retained for existing integrations.
+LoopDefinition = Loop
