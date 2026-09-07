@@ -8,13 +8,11 @@ reported as UNVERIFIED rather than PASS.
 from __future__ import annotations
 
 import asyncio
-import os
 import time
 from dataclasses import dataclass
-from typing import Any
 
 from ma_cli.config.engine import ConfigurationEngine
-from ma_cli.providers import ChatMessage, get_provider_registry
+from ma_cli.providers import ChatMessage, OpenRouterProvider, get_provider_registry
 
 
 TARGETS = ("openrouter", "omniroute", "9router", "ollama")
@@ -31,6 +29,7 @@ class Result:
 
 
 def _redacted_endpoint(value: str) -> str:
+    value = value.rstrip("/")
     return value.split("/v1", 1)[0] + ("/v1" if "/v1" in value else "")
 
 
@@ -41,6 +40,9 @@ async def verify_provider(name: str) -> Result:
     registry = get_provider_registry()
     registry.initialize(None)
     provider = registry.get(name)
+    if provider is None and name == "openrouter" and config.enabled:
+        provider = OpenRouterProvider(config)
+        registry.register(name, provider)
     if provider is None:
         return Result(name, "UNVERIFIED", _redacted_endpoint(config.base_url), detail="provider not registered")
     if not provider.enabled:
