@@ -6,7 +6,6 @@ import os
 import subprocess
 import threading
 import time
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -44,7 +43,7 @@ class ToolRegistry:
                                permissions=frozenset({"read"}), required_args=frozenset({"query"})))
         self.register(ToolSpec("apply_patch", "Apply a unified diff limited to workspace files.", self.apply_patch,
                                permissions=frozenset({"write"}), required_args=frozenset({"patch"})))
-        self.register(ToolSpec("run_command", "Run an approved command in the workspace.", self.run_command,
+        self.register(ToolSpec("run_command", "Run an explicitly approved command in the workspace.", self.run_command,
                                "high", frozenset({"execute"}), frozenset({"command"}), 900))
 
     def register(self, spec: ToolSpec) -> None:
@@ -81,7 +80,7 @@ class ToolRegistry:
         missing = spec.required_args - kwargs.keys()
         if missing:
             raise ValueError(f"missing required arguments: {sorted(missing)}")
-        if spec.name in {"run_command"} and not isinstance(kwargs.get("command"), str):
+        if spec.name == "run_command" and not isinstance(kwargs.get("command"), str):
             raise TypeError("command must be a string")
         if "path" in kwargs and not isinstance(kwargs["path"], str):
             raise TypeError("path must be a string")
@@ -90,7 +89,9 @@ class ToolRegistry:
 
     def _permission_check(self, spec: ToolSpec, kwargs: dict[str, Any]) -> None:
         if spec.name == "run_command":
-            decision = self.security.authorize_command(kwargs["command"], bool(kwargs.get("approved", False)))
+            if not bool(kwargs.get("approved", False)):
+                raise PermissionError("explicit approval required for command execution")
+            decision = self.security.authorize_command(kwargs["command"], approved=True)
             if not decision.allowed:
                 raise PermissionError(decision.reason)
 
@@ -126,10 +127,6 @@ class ToolRegistry:
         return results
 
     def apply_patch(self, patch: str) -> dict[str, Any]:
-        """Apply a standard unified diff using the local git executable.
-
-        Git is invoked without a shell; policy still controls the operation.
-        """
         if not patch.strip():
             raise ValueError("patch cannot be empty")
         decision = self.security.authorize_command("git apply --whitespace=nowarn", approved=True)
@@ -140,6 +137,8 @@ class ToolRegistry:
         return {"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
 
     def run_command(self, command: str, timeout: int = 120, approved: bool = False) -> dict[str, Any]:
+        if not approved:
+            raise PermissionError("explicit approval required for command execution")
         if not command.strip():
             raise ValueError("command cannot be empty")
         timeout = max(1, min(int(timeout), 900))
@@ -157,7 +156,6 @@ class ToolRegistry:
         return await asyncio.to_thread(self.execute, name, **kwargs)
 
     async def execute_many(self, calls: list[dict[str, Any]], max_concurrency: int = 4) -> list[Any]:
-        """Execute independent tool calls concurrently with bounded fan-out."""
         import asyncio
         semaphore = asyncio.Semaphore(max(1, min(max_concurrency, 16)))
         async def one(call: dict[str, Any]) -> Any:
