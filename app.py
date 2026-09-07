@@ -3,16 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 
 ROOT = Path(__file__).resolve().parent
-SPLASH_HTML = ROOT / "ui" / "splash" / "splash.html"
-SPLASH_CSS = ROOT / "ui" / "splash" / "ma-cli-splash.css"
-DASHBOARD_HTML = ROOT / "ui" / "dashboard" / "dashboard.html"
-DASHBOARD_CSS = ROOT / "ui" / "dashboard" / "dashboard.css"
-DASHBOARD_JS = ROOT / "ui" / "dashboard" / "dashboard.js"
-LOGO_SVG = ROOT / "assets" / "logo" / "ma-cli-animated.svg"
+UI_ROOT = ROOT / "ui"
+ASSETS_ROOT = ROOT / "assets"
+SPLASH_HTML = UI_ROOT / "splash" / "splash.html"
+DASHBOARD_HTML = UI_ROOT / "dashboard" / "dashboard.html"
 
 app = FastAPI(
     title="AIO-CLi",
@@ -29,7 +28,7 @@ def _html_file(path: Path, fallback: str) -> HTMLResponse:
 
 @app.get("/", response_class=HTMLResponse)
 async def root() -> HTMLResponse:
-    """Serve the operational dashboard at the deployment root."""
+    """Serve the dashboard at the deployment root."""
     return _html_file(
         DASHBOARD_HTML,
         "<h1>AIO-CLi</h1><p>Runtime online.</p><p><a href='/dashboard'>Open dashboard</a></p>",
@@ -38,12 +37,20 @@ async def root() -> HTMLResponse:
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard() -> HTMLResponse:
-    return _html_file(DASHBOARD_HTML, "<h1>AIO-CLi</h1><p>Dashboard unavailable.</p>")
+    return _html_file(
+        DASHBOARD_HTML,
+        "<h1>AIO-CLi</h1><p>Dashboard unavailable.</p>",
+    )
+
+
+@app.get("/dashboard/", include_in_schema=False)
+async def dashboard_trailing_slash() -> RedirectResponse:
+    return RedirectResponse(url="/dashboard", status_code=307)
 
 
 @app.get("/splash", response_class=HTMLResponse)
 async def splash() -> HTMLResponse:
-    """Keep the original splash screen available as a dedicated route."""
+    """Keep the original splash screen available."""
     if not SPLASH_HTML.is_file():
         return HTMLResponse("<h1>AIO-CLi</h1><p>Runtime online.</p>", status_code=200)
     html = SPLASH_HTML.read_text(encoding="utf-8")
@@ -70,21 +77,7 @@ async def api_status() -> dict[str, str]:
     }
 
 
-@app.get("/ui/splash/ma-cli-splash.css")
-async def splash_css() -> FileResponse:
-    return FileResponse(SPLASH_CSS, media_type="text/css")
-
-
-@app.get("/ui/dashboard/dashboard.css")
-async def dashboard_css() -> FileResponse:
-    return FileResponse(DASHBOARD_CSS, media_type="text/css")
-
-
-@app.get("/ui/dashboard/dashboard.js")
-async def dashboard_js() -> FileResponse:
-    return FileResponse(DASHBOARD_JS, media_type="application/javascript")
-
-
-@app.get("/assets/logo/ma-cli-animated.svg")
-async def logo_svg() -> FileResponse:
-    return FileResponse(LOGO_SVG, media_type="image/svg+xml")
+# Mount static directories instead of routing individual files through FileResponse.
+# This avoids Vercel serverless path-resolution issues for dashboard assets.
+app.mount("/ui", StaticFiles(directory=UI_ROOT, check_dir=True), name="ui")
+app.mount("/assets", StaticFiles(directory=ASSETS_ROOT, check_dir=True), name="assets")
