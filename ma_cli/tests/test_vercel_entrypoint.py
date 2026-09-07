@@ -21,6 +21,7 @@ async def test_vercel_entrypoint_and_dashboard() -> None:
         logo = await client.get("/assets/logo/ma-cli-animated.svg")
 
     assert responses.status_code == 200
+    assert "AIO-CLi Dashboard" in responses.text
     assert dashboard.status_code == 200
     assert "AIO-CLi Dashboard" in dashboard.text
     assert dashboard_slash.status_code == 307
@@ -31,9 +32,11 @@ async def test_vercel_entrypoint_and_dashboard() -> None:
     assert status.json()["runtime"] == "online"
     assert status.json()["dashboard"] == "/dashboard"
     assert css.status_code == 200
-    assert "app-shell" in css.text
+    assert "desktop-shell" in css.text
+    assert "single-panel" in css.text
     assert js.status_code == 200
-    assert "checkRuntime" in js.text
+    assert "configureMultiScreen" in js.text
+    assert "openModal" in js.text
     assert splash_css.status_code == 200
     assert "--ma-cyan" in splash_css.text
     assert logo.status_code == 200
