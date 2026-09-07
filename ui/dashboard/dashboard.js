@@ -12,31 +12,44 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
+function setText(selector, value) {
+  const element = $(selector);
+  if (element) element.textContent = value;
+  return element;
+}
+
 function saveState() {
   Object.entries(state).forEach(([key, value]) => localStorage.setItem(`aio.${key}`, String(value)));
 }
 
 function refreshChips() {
-  const mode = $('#mode-chip');
-  const router = $('#model-chip');
-  if (mode) mode.textContent = `Mode : ${state.mode}`;
-  if (router) router.textContent = `Router : ${state.router}`;
+  setText('#mode-chip', `Mode : ${state.mode}`);
+  setText('#model-chip', `Router : ${state.router}`);
 }
 
 function openModal(name) {
   const backdrop = $('#modal-backdrop');
   if (!backdrop) return;
   backdrop.hidden = false;
-  $$('[data-modal-panel]').forEach((panel) => { panel.hidden = panel.dataset.modalPanel !== name; });
+  $$('[data-modal-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.modalPanel !== name;
+  });
   if (name !== 'settings') return;
-  $('#setting-mode').value = state.mode;
-  $('#setting-router').value = state.router;
-  $('#setting-reasoning').value = state.reasoning;
-  $('#setting-shell').value = state.shell;
-  $('#setting-failover').checked = state.failover;
-  $('#setting-browser').checked = state.browser;
-  $('#setting-mcp').checked = state.mcp;
-  $('#setting-longrun').checked = state.longrun;
+
+  const values = [
+    ['#setting-mode', state.mode, 'value'],
+    ['#setting-router', state.router, 'value'],
+    ['#setting-reasoning', state.reasoning, 'value'],
+    ['#setting-shell', state.shell, 'value'],
+    ['#setting-failover', state.failover, 'checked'],
+    ['#setting-browser', state.browser, 'checked'],
+    ['#setting-mcp', state.mcp, 'checked'],
+    ['#setting-longrun', state.longrun, 'checked']
+  ];
+  values.forEach(([selector, value, property]) => {
+    const element = $(selector);
+    if (element) element[property] = value;
+  });
 }
 
 function closeModal() {
@@ -72,30 +85,40 @@ async function checkRuntime() {
       fetch('/api/status', { cache: 'no-store' })
     ]);
     if (!healthRes.ok || !statusRes.ok) throw new Error('API unavailable');
+
     const health = await healthRes.json();
     const status = await statusRes.json();
-    $('#global-status').innerHTML = `<span></span>${health.status === 'ok' ? 'Runtime online' : 'Runtime dégradé'}`;
-    $('#health-api').textContent = 'OK';
-    $('#health-dashboard').textContent = 'OK';
-    $('#metric-runtime').textContent = health.status === 'ok' ? 'ONLINE' : 'DEGRADED';
-    $('#metric-deployment').textContent = status.deployment || 'vercel';
-    $('#hub-status').textContent = 'READY';
-  } catch {
-    $('#global-status').innerHTML = '<span></span>Runtime indisponible';
-    $('#health-api').textContent = 'ERROR';
-    $('#health-dashboard').textContent = 'ERROR';
-    $('#metric-runtime').textContent = 'ERROR';
-    $('#hub-status').textContent = 'DEGRADED';
+    const online = health.status === 'ok';
+
+    const statusPill = $('#global-status');
+    if (statusPill) {
+      statusPill.innerHTML = `<span></span>${online ? 'Runtime online' : 'Runtime dégradé'}`;
+    }
+    setText('#health-api', 'OK');
+    setText('#health-dashboard', 'OK');
+    setText('#metric-runtime', online ? 'ONLINE' : 'DEGRADED');
+    setText('#metric-deployment', status.deployment || 'vercel');
+    setText('#hub-status', online ? 'READY' : 'DEGRADED');
+    setText('#execution-state', online ? 'IDLE' : 'DEGRADED');
+  } catch (error) {
+    const statusPill = $('#global-status');
+    if (statusPill) statusPill.innerHTML = '<span></span>Runtime indisponible';
+    setText('#health-api', 'ERROR');
+    setText('#health-dashboard', 'ERROR');
+    setText('#metric-runtime', 'ERROR');
+    setText('#hub-status', 'DEGRADED');
+    setText('#execution-state', 'ERROR');
   }
+
   try {
     const assets = await Promise.all([
       fetch('/assets/logo/ma-cli-animated.svg', { cache: 'no-store' }),
       fetch('/ui/dashboard/dashboard.css', { cache: 'no-store' }),
       fetch('/ui/dashboard/dashboard.js', { cache: 'no-store' })
     ]);
-    $('#health-assets').textContent = assets.every((res) => res.ok) ? 'OK' : 'ERROR';
+    setText('#health-assets', assets.every((res) => res.ok) ? 'OK' : 'ERROR');
   } catch {
-    $('#health-assets').textContent = 'ERROR';
+    setText('#health-assets', 'ERROR');
   }
 }
 
@@ -103,7 +126,10 @@ function updateLineNumbers() {
   const editor = $('#code-editor');
   const numbers = $('#line-numbers');
   if (!editor || !numbers) return;
-  numbers.textContent = Array.from({ length: editor.value.split('\n').length }, (_, i) => String(i + 1)).join('\n');
+  numbers.textContent = Array.from(
+    { length: editor.value.split('\n').length },
+    (_, i) => String(i + 1)
+  ).join('\n');
 }
 
 function updateCursor() {
@@ -118,16 +144,28 @@ function updateCursor() {
 
 function setSinglePanel(panel) {
   document.body.classList.add('single-panel');
-  $$('.panel').forEach((item) => item.classList.toggle('is-selected', item.dataset.role === panel));
+  $$('.panel').forEach((item) => {
+    item.classList.toggle('is-selected', item.dataset.role === panel);
+  });
 }
 
 function configureMultiScreen() {
   const origin = window.location.origin;
+  const opened = [];
   ['prompt', 'code', 'hub'].forEach((panel) => {
-    const popup = window.open(`${origin}/dashboard?panel=${panel}`, `aio-${panel}`, 'width=1000,height=900,resizable=yes,scrollbars=yes');
-    if (popup) popup.focus();
+    const popup = window.open(
+      `${origin}/dashboard?panel=${panel}`,
+      `aio-${panel}`,
+      'width=1000,height=900,resizable=yes,scrollbars=yes'
+    );
+    if (popup) {
+      popup.focus();
+      opened.push(panel);
+    }
   });
-  addLog('Mode 3 écrans activé : Prompt / Code / Hub.');
+  addLog(opened.length === 3
+    ? 'Mode 3 écrans activé : Prompt / Code / Hub.'
+    : 'Mode 3 écrans : certaines fenêtres ont été bloquées par le navigateur.');
 }
 
 function applyPanelQuery() {
@@ -139,8 +177,9 @@ function bind() {
   refreshChips();
   applyPanelQuery();
   updateLineNumbers();
+  updateCursor();
 
-  $('#layout-toggle').addEventListener('click', () => {
+  $('#layout-toggle')?.addEventListener('click', () => {
     if (document.body.classList.contains('single-panel')) {
       document.body.classList.remove('single-panel');
       $$('.panel').forEach((item) => item.classList.remove('is-selected'));
@@ -148,55 +187,112 @@ function bind() {
     }
     setSinglePanel('prompt');
   });
-  $('#detach-all').addEventListener('click', configureMultiScreen);
-  $$('[data-panel]').forEach((button) => button.addEventListener('click', () => setSinglePanel(button.dataset.panel)));
-  $$('[data-modal]').forEach((button) => button.addEventListener('click', () => openModal(button.dataset.modal)));
-  $$('[data-close-modal]').forEach((button) => button.addEventListener('click', closeModal));
-  $('#modal-backdrop').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeModal(); });
 
-  $('#save-settings').addEventListener('click', () => {
-    state.mode = $('#setting-mode').value;
-    state.router = $('#setting-router').value;
-    state.reasoning = $('#setting-reasoning').value;
-    state.shell = $('#setting-shell').value;
-    state.failover = $('#setting-failover').checked;
-    state.browser = $('#setting-browser').checked;
-    state.mcp = $('#setting-mcp').checked;
-    state.longrun = $('#setting-longrun').checked;
+  $('#detach-all')?.addEventListener('click', configureMultiScreen);
+  $$('[data-panel]').forEach((button) =>
+    button.addEventListener('click', () => setSinglePanel(button.dataset.panel))
+  );
+  $$('[data-modal]').forEach((button) =>
+    button.addEventListener('click', () => openModal(button.dataset.modal))
+  );
+  $$('[data-close-modal]').forEach((button) =>
+    button.addEventListener('click', closeModal)
+  );
+
+  $('#modal-backdrop')?.addEventListener('click', (event) => {
+    if (event.target === event.currentTarget) closeModal();
+  });
+
+  $('#save-settings')?.addEventListener('click', () => {
+    const mode = $('#setting-mode');
+    const router = $('#setting-router');
+    const reasoning = $('#setting-reasoning');
+    const shell = $('#setting-shell');
+    const failover = $('#setting-failover');
+    const browser = $('#setting-browser');
+    const mcp = $('#setting-mcp');
+    const longrun = $('#setting-longrun');
+
+    if (mode) state.mode = mode.value;
+    if (router) state.router = router.value;
+    if (reasoning) state.reasoning = reasoning.value;
+    if (shell) state.shell = shell.value;
+    if (failover) state.failover = failover.checked;
+    if (browser) state.browser = browser.checked;
+    if (mcp) state.mcp = mcp.checked;
+    if (longrun) state.longrun = longrun.checked;
+
     saveState();
     refreshChips();
-    $('#settings-saved').textContent = 'Paramètres enregistrés ✓';
+    setText('#settings-saved', 'Paramètres enregistrés ✓');
     addLog(`Configuration : ${state.mode} / ${state.router} / reasoning ${state.reasoning}`);
     setTimeout(closeModal, 250);
   });
 
-  $('#run-task').addEventListener('click', () => {
-    const prompt = $('#prompt-input').value.trim();
-    if (!prompt) { $('#prompt-input').focus(); return; }
+  $('#run-task')?.addEventListener('click', () => {
+    const input = $('#prompt-input');
+    const prompt = input?.value.trim() || '';
+    if (!prompt) {
+      input?.focus();
+      return;
+    }
     addHistory(prompt);
-    $('#execution-state').textContent = 'RUNNING';
-    $('#hub-status').textContent = 'RUNNING';
-    $('#progress-bar').style.width = '25%';
+    setText('#execution-state', 'RUNNING');
+    setText('#hub-status', 'RUNNING');
+    const progress = $('#progress-bar');
+    if (progress) progress.style.width = '25%';
     addLog(`Tâche reçue : ${prompt.slice(0, 100)}`);
-    setTimeout(() => { $('#progress-bar').style.width = '62%'; addLog('Planner → agents spécialisés → validation'); }, 500);
-    setTimeout(() => { $('#progress-bar').style.width = '100%'; $('#execution-state').textContent = 'READY'; $('#hub-status').textContent = 'READY'; addLog('Cycle UI terminé.'); }, 1100);
+    setTimeout(() => {
+      if (progress) progress.style.width = '62%';
+      addLog('Planner → agents spécialisés → validation');
+    }, 500);
+    setTimeout(() => {
+      if (progress) progress.style.width = '100%';
+      setText('#execution-state', 'READY');
+      setText('#hub-status', 'READY');
+      addLog('Cycle UI terminé.');
+    }, 1100);
   });
-  $('#prompt-input').addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); $('#run-task').click(); }
+
+  $('#prompt-input')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      $('#run-task')?.click();
+    }
   });
-  $('#clear-prompt').addEventListener('click', () => { $('#prompt-input').value = ''; $('#prompt-input').focus(); });
-  $('#clear-history').addEventListener('click', () => { $('#history-list').innerHTML = '<div class="empty">Aucune tâche locale.</div>'; });
 
-  $('#code-editor').addEventListener('input', () => { updateLineNumbers(); $('#save-state').textContent = 'Modifications locales non sauvegardées'; });
-  $('#code-editor').addEventListener('keyup', updateCursor);
-  $('#code-editor').addEventListener('click', updateCursor);
-  $('#save-code').addEventListener('click', () => { $('#save-state').textContent = 'État local enregistré ✓'; addLog('Éditeur : état local enregistré.'); });
-  $('#format-code').addEventListener('click', () => addLog('Éditeur : formatage demandé.'));
+  $('#clear-prompt')?.addEventListener('click', () => {
+    const input = $('#prompt-input');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  });
 
-  setInterval(checkRuntime, 30000);
+  $('#clear-history')?.addEventListener('click', () => {
+    const list = $('#history-list');
+    if (list) list.innerHTML = '<div class="empty">Aucune tâche locale.</div>';
+  });
+
+  $('#code-editor')?.addEventListener('input', () => {
+    updateLineNumbers();
+    setText('#save-state', 'Modifications locales non sauvegardées');
+  });
+  $('#code-editor')?.addEventListener('keyup', updateCursor);
+  $('#code-editor')?.addEventListener('click', updateCursor);
+  $('#save-code')?.addEventListener('click', () => {
+    setText('#save-state', 'État local enregistré ✓');
+    addLog('Éditeur : état local enregistré.');
+  });
+  $('#format-code')?.addEventListener('click', () => addLog('Éditeur : formatage demandé.'));
+
   checkRuntime();
-  $('#runtime-clock').textContent = new Date().toLocaleTimeString('fr-FR');
-  setInterval(() => { $('#runtime-clock').textContent = new Date().toLocaleTimeString('fr-FR'); }, 1000);
+  setInterval(checkRuntime, 30000);
+
+  setText('#runtime-clock', new Date().toLocaleTimeString('fr-FR'));
+  setInterval(() => {
+    setText('#runtime-clock', new Date().toLocaleTimeString('fr-FR'));
+  }, 1000);
 }
 
 document.addEventListener('DOMContentLoaded', bind);
