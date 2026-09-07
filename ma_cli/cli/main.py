@@ -25,14 +25,38 @@ from ..workspace.manager import get_workspace_manager
 from .extras import register_extra_commands
 
 
-@click.group()
+@click.group(invoke_without_command=True, context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(version=__version__, prog_name="ma-cli")
-def cli():
-    """MA-CLI - Multi-Agent Autonomous CLI
-    
-    An independent agent orchestration platform capable of planning,
-    task decomposition, agent selection, model selection, and more.
+@click.option("-p", "--print", "print_mode", is_flag=True,
+              help="One-shot print mode: run a prompt and exit (non-interactive).")
+@click.option("-c", "--continue", "continue_session", is_flag=True,
+              help="Continue the most recent interactive session.")
+@click.option("-r", "--resume", "resume_id", default=None,
+              help="Resume a previous session id.")
+@click.option("--mode", "session_mode", type=click.Choice(["default", "plan", "ask"]),
+              default="default", show_default=True, help="Session mode.")
+@click.argument("prompt", nargs=-1)
+@click.pass_context
+def cli(ctx, print_mode: bool, continue_session: bool, resume_id: str | None,
+        session_mode: str, prompt: tuple[str, ...]):
+    """MA-CLI — interactive coding session (Claude Code-style).
+
+    Launch with no arguments for the REPL. Slash commands start with /.
+    Use `ma-cli -p "prompt"` for one-shot print mode.
     """
+    if ctx.invoked_subcommand is not None:
+        return
+    from ..tui.session import launch_session
+    text = " ".join(prompt).strip() or None
+    if print_mode and not text and not continue_session and not resume_id:
+        raise click.UsageError("prompt required for --print")
+    launch_session(
+        prompt=text,
+        print_mode=print_mode,
+        continue_session=continue_session,
+        resume_id=resume_id,
+        mode=session_mode,
+    )
 
 
 @cli.command()

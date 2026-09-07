@@ -5,6 +5,7 @@ All notable changes to MA-CLI are documented in this file.
 ## [1.0.0] - 2026-09-07
 
 ### Added
+- Claude Code-style interactive session: `ma-cli` REPL, `-p` print mode, `-c`/`-r` resume, slash commands, tool traces, plan/ask modes, `MA.md` project memory.
 - NativeAgent registered as a first-class agent with cancel/inspect/review.
 - Real loop execution with retries, approval gates, and fail-closed success criteria.
 - Tool engine expansions: edit_file, delete_file, search, glob, git, http_get.
@@ -15,7 +16,8 @@ All notable changes to MA-CLI are documented in this file.
 - Secret store with 0600 file permissions and log redaction.
 - Allow-listed plugin loader and terminal dashboard (`ma-cli tui`).
 - Prompt-injection inspection on the native runtime.
-- CLI groups: git, mcp, browser, secrets, upgrade, plugins, sandbox, tui.
+- CLI groups: git, mcp, browser, secrets, upgrade, plugins, sandbox, tui, review, report, observability, context.
+- Review, report, observability, and context engines wired through the orchestrator validation gate.
 - LICENSE (MIT), install.sh, and setup-ma-cli.ps1.
 
 ### Changed

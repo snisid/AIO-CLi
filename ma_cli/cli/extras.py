@@ -168,7 +168,7 @@ def upgrade_repair():
 
 @click.command(name="tui")
 def tui_command():
-    """Render the runtime dashboard."""
+    """Render the runtime status dashboard (REPL is `ma-cli` with no args)."""
     from ..tui.dashboard import render_dashboard
     click.echo(render_dashboard())
 

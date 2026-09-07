@@ -75,9 +75,12 @@ The repository is being hardened incrementally. **The project does not claim glo
 pip install -e ".[dev]"
 # or: bash scripts/install.sh
 ma-cli doctor
-ma-cli init
-ma-cli run "Build authentication with RBAC"
+ma-cli                 # Claude Code-style interactive session
+ma-cli -p "Build authentication with RBAC"   # one-shot
+ma-cli run "Build authentication with RBAC"  # scripted orchestrator
 ```
+
+See [Interfaces](docs/INTERFACE.md) for slash commands, plan/ask modes, and tool traces.
 
 ## Core capabilities
 
