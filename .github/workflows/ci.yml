@@ -37,7 +37,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e ".[all]"
+      - run: python -m pip install -e ".[all,dev]"
       - run: python -m playwright install --with-deps chromium
       - run: python -m pytest -q ma_cli/tests/test_browser_engine.py
 
@@ -48,7 +48,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install httpx
+      - run: python -m pip install -e ".[dev]"
       - name: Live provider verification
         env:
           OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
