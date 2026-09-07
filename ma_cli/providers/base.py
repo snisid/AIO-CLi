@@ -1,13 +1,8 @@
-"""
-Provider Interface for MA-CLI.
-
-This module defines the provider abstraction for model providers.
-"""
-
+"""Provider interfaces and shared resilience primitives for AIO-CLi."""
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from ..core.models import HealthStatus
@@ -15,30 +10,23 @@ from ..core.models import HealthStatus
 
 @dataclass
 class ModelInfo:
-    """Information about a model."""
+    """Information about a model advertised by a provider."""
     model_id: str
     name: str
-    provider: str = ""  # Will be set by provider discovery
-    capabilities: list[str] = None
+    provider: str = ""
+    capabilities: list[str] = field(default_factory=list)
     max_context_tokens: int = 0
     cost_per_token: float = 0.0
     available: bool = True
-    
-    def __post_init__(self):
-        if self.capabilities is None:
-            self.capabilities = []
-    
+
     def has_capabilities(self, required: list[str]) -> bool:
-        """Check if model has all required capabilities."""
-        if not required:
-            return True
-        return all(cap in self.capabilities for cap in required)
+        return not required or all(cap in self.capabilities for cap in required)
 
 
 @dataclass
 class ChatMessage:
-    """A message in a chat conversation."""
-    role: str  # 'system', 'user', 'assistant'
+    """A chat message, including optional tool-call metadata."""
+    role: str
     content: str
     tool_calls: list[dict[str, Any]] | None = None
     tool_call_id: str | None = None
@@ -46,139 +34,93 @@ class ChatMessage:
 
 @dataclass
 class ChatResponse:
-    """Response from a chat completion."""
+    """Normalized provider chat response."""
     content: str
     model: str
-    usage: dict[str, int] = None
-    tool_calls: list[dict[str, Any]] = None
+    usage: dict[str, int] = field(default_factory=dict)
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
     finish_reason: str = "stop"
     latency_ms: float = 0.0
-    
-    def __post_init__(self):
-        if self.usage is None:
-            self.usage = {}
-        if self.tool_calls is None:
-            self.tool_calls = []
+    raw: dict[str, Any] = field(default_factory=dict)
 
 
 class Provider(ABC):
+    """Universal asynchronous provider contract.
+
+    Older provider subclasses may omit ``super().__init__``; the circuit
+    breaker is therefore initialized lazily and remains available uniformly.
     """
-    Universal Provider Interface.
-    
-    All model providers (Ollama, OmniRoute, Anthropic, etc.) must implement
-    this interface to be used by MA-CLI.
-    
-    Uses circuit breaker pattern for resilience.
-    """
-    
-    def __init__(self):
-        from .circuit_breaker import CircuitBreaker, CircuitConfig
-        
-        self._circuit_breaker = CircuitBreaker(
-            name=f"provider_{self.name}",
-            config=CircuitConfig(
-                failure_threshold=5,
-                success_threshold=3,
-                timeout_seconds=60
-            )
-        )
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Unique provider identifier."""
-    
+
     @property
     @abstractmethod
     def type(self) -> str:
-        """Provider type (e.g., 'openai-compatible', 'anthropic')."""
-    
+        """Provider protocol/type."""
+
     @property
     @abstractmethod
     def base_url(self) -> str:
-        """API base URL."""
-    
+        """Provider API base URL."""
+
     @property
     @abstractmethod
     def enabled(self) -> bool:
-        """Whether provider is enabled."""
-    
+        """Whether the provider is enabled."""
+
     @property
     def circuit_breaker(self):
-        """Get the circuit breaker for this provider."""
-        return self._circuit_breaker
-    
+        """Return a lazily-created per-provider circuit breaker."""
+        breaker = getattr(self, "_circuit_breaker", None)
+        if breaker is None:
+            from .circuit_breaker import CircuitBreaker, CircuitConfig
+
+            breaker = CircuitBreaker(
+                name=f"provider_{self.name}",
+                config=CircuitConfig(
+                    failure_threshold=5,
+                    success_threshold=3,
+                    timeout_seconds=60,
+                    half_open_max_calls=3,
+                ),
+            )
+            self._circuit_breaker = breaker
+        return breaker
+
     @abstractmethod
     async def discover_models(self) -> list[ModelInfo]:
-        """
-        Discover available models from this provider.
-        
-        Returns:
-            List of available models
-        """
-    
+        """Discover currently available models."""
+
     @abstractmethod
-    async def chat(
-        self,
-        messages: list[ChatMessage],
-        model: str,
-        **kwargs: Any
-    ) -> ChatResponse:
-        """
-        Send chat completion request.
-        
-        Args:
-            messages: List of chat messages
-            model: Model ID to use
-            **kwargs: Additional parameters (temperature, max_tokens, etc.)
-            
-        Returns:
-            ChatResponse with model output
-        """
-    
+    async def chat(self, messages: list[ChatMessage], model: str, **kwargs: Any) -> ChatResponse:
+        """Execute one model completion."""
+
     @abstractmethod
     async def health_check(self) -> HealthStatus:
-        """
-        Check provider health and connectivity.
-        
-        Returns:
-            Current health status
-        """
-    
-    async def safe_chat(
-        self,
-        messages: list[ChatMessage],
-        model: str,
-        **kwargs: Any
-    ) -> ChatResponse:
-        """
-        Send chat request through circuit breaker.
-        
-        This method wraps the chat call with circuit breaker protection.
-        Raises CircuitOpenError if the circuit is open.
-        """
-        return await self._circuit_breaker.call_async(
-            self.chat,
-            messages,
-            model,
-            **kwargs
-        )
-    
+        """Return provider health."""
+
+    async def safe_chat(self, messages: list[ChatMessage], model: str, **kwargs: Any) -> ChatResponse:
+        """Execute chat through the provider circuit breaker."""
+        return await self.circuit_breaker.call_async(self.chat, messages, model, **kwargs)
+
     def get_info(self) -> dict[str, Any]:
-        """Get provider information including circuit status."""
+        """Return non-secret provider diagnostics."""
         return {
             "name": self.name,
             "type": self.type,
             "base_url": self.base_url,
             "enabled": self.enabled,
-            "circuit_state": self._circuit_breaker.state.value,
-            "circuit_stats": self._circuit_breaker.stats.failure_rate
+            "circuit_state": self.circuit_breaker.state.value,
+            "circuit_stats": self.circuit_breaker.stats.failure_rate,
         }
 
 
 @dataclass
 class ProviderConfig:
-    """Configuration for a provider."""
+    """Runtime configuration for a provider."""
     name: str
     type: str
     enabled: bool = True
@@ -186,8 +128,5 @@ class ProviderConfig:
     api_key: str | None = None
     timeout: int = 60
     retry_count: int = 3
-    headers: dict[str, str] = None
-    
-    def __post_init__(self):
-        if self.headers is None:
-            self.headers = {}
+    headers: dict[str, str] = field(default_factory=dict)
+    options: dict[str, Any] = field(default_factory=dict)
