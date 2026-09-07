@@ -62,11 +62,14 @@ class IntelligentRouter:
         self.last_trace = CompletionTrace()
 
     def _ensure_native_openrouter(self, registry: Any) -> None:
-        if registry.get("openrouter") is not None:
-            return
         config = ConfigurationEngine().load()
         provider_config = config.providers.get("openrouter")
-        if provider_config and provider_config.enabled:
+        if not provider_config or not provider_config.enabled:
+            return
+        current = registry.get("openrouter")
+        if not isinstance(current, OpenRouterProvider):
+            if current is not None:
+                registry.unregister("openrouter")
             registry.register("openrouter", OpenRouterProvider(provider_config))
 
     def record_outcome(self, provider: str, model: str, *, latency_ms: float | None = None,
@@ -258,5 +261,4 @@ class IntelligentRouter:
                         await asyncio.sleep(delay)
 
             self.last_trace = trace
-            # All candidates failed. Refresh discovery/cooldowns and rotate again.
             await asyncio.sleep(min(0.25, self.failover_policy.max_backoff_seconds))
