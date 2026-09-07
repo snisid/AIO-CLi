@@ -25,8 +25,9 @@ def test_registry_exposes_schemas(tmp_path: Path):
 
 def test_registry_requires_approval_for_high_risk_command(tmp_path: Path):
     registry = ToolRegistry(tmp_path)
+    # Use a high-risk command that requires approval (git push is classified as high risk)
     with pytest.raises(PermissionError):
-        registry.execute("run_command", command="echo blocked")
+        registry.execute("run_command", command="git push origin main")
 
 
 def test_registry_executes_approved_command_and_audits(tmp_path: Path):

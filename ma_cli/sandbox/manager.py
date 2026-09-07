@@ -16,7 +16,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import docker  # type: ignore
+# Docker is an optional dependency - import lazily
+try:
+    import docker  # type: ignore
+    DOCKER_AVAILABLE = True
+except ImportError:
+    DOCKER_AVAILABLE = False
+    docker = None  # type: ignore
 
 from ..core.models import HealthStatus
 from ..events.bus import EventBus
@@ -93,16 +99,22 @@ class SandboxManager:
         self.config = config or SandboxConfig()
         self.permission_engine = permission_engine
         self.event_bus = event_bus
-        self._docker_client: docker.DockerClient | None = None
+        self._docker_client: Any | None = None  # type: ignore
         self._active_containers: dict[str, Any] = {}
         self._workspace_roots: dict[str, Path] = {}
         
     @property
-    def docker_client(self) -> docker.DockerClient:
+    def docker_client(self) -> Any:  # type: ignore
         """Get Docker client, raising error if unavailable."""
+        if not DOCKER_AVAILABLE:
+            raise SandboxUnavailableError(
+                "Docker Python package not installed. "
+                "Install with: pip install docker\n"
+                "Sandbox enforcement requires Docker. Task aborted."
+            )
         if self._docker_client is None:
             try:
-                self._docker_client = docker.from_env()
+                self._docker_client = docker.from_env()  # type: ignore
                 # Test connection
                 self._docker_client.ping()
             except Exception as e:
@@ -115,8 +127,10 @@ class SandboxManager:
     
     def is_available(self) -> bool:
         """Check if Docker sandbox is available."""
+        if not DOCKER_AVAILABLE:
+            return False
         try:
-            client = docker.from_env()
+            client = docker.from_env()  # type: ignore
             client.ping()
             return True
         except Exception:
@@ -373,13 +387,25 @@ class SandboxManager:
             
             return result
             
-        except docker.errors.APIError as e:
-            logger.error(f"Docker API error: {e}")
+        except Exception as e:
+            # Handle docker.errors.APIError when docker is available
+            if DOCKER_AVAILABLE and hasattr(e, 'response'):
+                logger.error(f"Docker API error: {e}")
+                return SandboxResult(
+                    success=False,
+                    exit_code=-1,
+                    stdout="",
+                    stderr=f"Docker API error: {e}",
+                    duration_ms=int((datetime.utcnow() - start_time).total_seconds() * 1000),
+                    error=str(e)
+                )
+            # General exception handling
+            logger.error(f"Sandbox execution error: {e}")
             return SandboxResult(
                 success=False,
                 exit_code=-1,
                 stdout="",
-                stderr=f"Docker API error: {e}",
+                stderr=f"Sandbox error: {e}",
                 duration_ms=int((datetime.utcnow() - start_time).total_seconds() * 1000),
                 error=str(e)
             )

@@ -68,7 +68,7 @@ class TaskGraph:
     def ready(self) -> list[Task]:
         return [
             task for task in self.tasks.values()
-            if task.state == TaskState.PENDING
+            if task.state in {TaskState.PENDING, TaskState.REPAIRED}
             and all(self.tasks[d].state in {TaskState.PASSED, TaskState.REPAIRED} for d in task.dependencies)
         ]
 
@@ -95,6 +95,9 @@ class ExecutionEngine:
                     task.error = str(exc)
                     if repair and task.attempts < self.max_attempts and repair(task, exc):
                         task.state = TaskState.REPAIRED
+                        task.error = None
+                        task.result = None
+                        continue
                     else:
                         task.state = TaskState.FAILED
         report.success = bool(graph.tasks) and all(
