@@ -1,19 +1,16 @@
-"""
-Loop Engine for MA-CLI.
-
-This module defines the loop abstraction for workflow execution.
-"""
-
+"""Auditable workflow loop engine."""
 from __future__ import annotations
 
+import asyncio
+import inspect
+import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 
 class LoopStatus(Enum):
-    """Loop execution status."""
     PENDING = "pending"
     RUNNING = "running"
     WAITING_APPROVAL = "waiting_approval"
@@ -24,7 +21,6 @@ class LoopStatus(Enum):
 
 @dataclass
 class LoopStep:
-    """A step in a loop."""
     name: str
     description: str = ""
     agent: str | None = None
@@ -35,61 +31,41 @@ class LoopStep:
 
 @dataclass
 class RetryPolicy:
-    """Retry policy for loops."""
     max_retries: int = 3
-    backoff_type: str = "exponential"  # 'linear' or 'exponential'
+    backoff_type: str = "exponential"
     initial_delay_ms: int = 1000
     max_delay_ms: int = 30000
-    retry_on: list[str] = field(default_factory=list)  # Error types to retry
-    
+    retry_on: list[str] = field(default_factory=list)
+
     def should_retry(self, error_type: str, attempt: int) -> bool:
-        """Check if retry should be attempted."""
-        if attempt >= self.max_retries:
-            return False
-        if self.retry_on and error_type not in self.retry_on:
-            return False
-        return True
-    
+        return attempt < self.max_retries and (not self.retry_on or error_type in self.retry_on)
+
     def get_delay(self, attempt: int) -> float:
-        """Get delay in seconds for retry attempt."""
-        if self.backoff_type == "linear":
-            return self.initial_delay_ms * attempt / 1000
-        else:  # exponential
-            return min(
-                self.initial_delay_ms * (2 ** attempt),
-                self.max_delay_ms
-            ) / 1000
+        value = self.initial_delay_ms * (attempt if self.backoff_type == "linear" else 2 ** attempt)
+        return min(value, self.max_delay_ms) / 1000
 
 
 @dataclass
 class ApprovalPolicy:
-    """Approval policy for loops."""
     auto_approve: bool = False
     require_approval_for: list[str] = field(default_factory=list)
     approval_timeout_seconds: int = 300
-    
+
     def requires_approval(self, action: str) -> bool:
-        """Check if action requires approval."""
-        if self.auto_approve:
-            return False
-        if not self.require_approval_for:
-            return False
-        return action in self.require_approval_for
+        return not self.auto_approve and action in self.require_approval_for
 
 
 @dataclass
 class MemoryConfig:
-    """Memory configuration for loops."""
     enabled: bool = True
-    scope: str = "loop"  # 'loop', 'task', 'session'
+    scope: str = "loop"
     retention_hours: int = 24
     search_enabled: bool = True
 
 
 @dataclass
 class OutputConfig:
-    """Output configuration for loops."""
-    format: str = "text"  # 'text', 'json', 'markdown'
+    format: str = "text"
     save_to_file: bool = False
     file_path: str | None = None
     include_metadata: bool = True
@@ -97,12 +73,6 @@ class OutputConfig:
 
 @dataclass
 class Loop:
-    """
-    Loop specification for workflow execution.
-    
-    Loops are the primary workflow abstraction in MA-CLI, replacing
-    'Skills' with explicit, auditable workflows.
-    """
     name: str
     objective: str
     trigger: str = "manual"
@@ -111,48 +81,41 @@ class Loop:
     agents: list[str] = field(default_factory=list)
     models: list[str] = field(default_factory=list)
     constraints: list[str] = field(default_factory=list)
-    memory: MemoryConfig = None
+    memory: MemoryConfig | None = None
     steps: list[LoopStep] = field(default_factory=list)
     success_criteria: list[str] = field(default_factory=list)
     failure_criteria: list[str] = field(default_factory=list)
-    retry_policy: RetryPolicy = None
-    approval_policy: ApprovalPolicy = None
-    output: OutputConfig = None
+    retry_policy: RetryPolicy | None = None
+    approval_policy: ApprovalPolicy | None = None
+    output: OutputConfig | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    
-    def __post_init__(self):
-        if self.memory is None:
-            self.memory = MemoryConfig()
-        if self.retry_policy is None:
-            self.retry_policy = RetryPolicy()
-        if self.approval_policy is None:
-            self.approval_policy = ApprovalPolicy()
-        if self.output is None:
-            self.output = OutputConfig()
+
+    def __post_init__(self) -> None:
+        self.memory = self.memory or MemoryConfig()
+        self.retry_policy = self.retry_policy or RetryPolicy()
+        self.approval_policy = self.approval_policy or ApprovalPolicy()
+        self.output = self.output or OutputConfig()
 
 
 @dataclass
 class LoopState:
-    """State of a running loop."""
     loop: Loop
     inputs: dict[str, Any]
     current_step: int = 0
     outputs: dict[str, Any] = field(default_factory=dict)
     retries: dict[str, int] = field(default_factory=dict)
     approvals: dict[str, bool] = field(default_factory=dict)
-    started_at: datetime = field(default_factory=datetime.utcnow)
-    last_updated: datetime = field(default_factory=datetime.utcnow)
+    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     status: LoopStatus = LoopStatus.PENDING
     error: str | None = None
-    
+
     def update_activity(self) -> None:
-        """Update last activity timestamp."""
-        self.last_updated = datetime.utcnow()
+        self.last_updated = datetime.now(timezone.utc)
 
 
 @dataclass
 class LoopResult:
-    """Result of loop execution."""
     success: bool
     outputs: dict[str, Any]
     state: LoopState
@@ -162,83 +125,88 @@ class LoopResult:
 
 
 class LoopEngine:
-    """
-    Loop execution engine.
-    
-    Executes defined loops with proper state management,
-    retry handling, and approval gates.
-    """
-    
-    def __init__(self):
+    """Executes registered workflows with real step dispatch and bounded repair."""
+
+    def __init__(self, step_executor: Callable[..., Any] | None = None):
         self._loops: dict[str, Loop] = {}
         self._running: dict[str, LoopState] = {}
-    
+        self.step_executor = step_executor
+
     def register(self, loop: Loop) -> None:
-        """Register a loop definition."""
         self._loops[loop.name] = loop
-    
+
     def get(self, name: str) -> Loop | None:
-        """Get a loop by name."""
         return self._loops.get(name)
-    
+
     def list_all(self) -> list[Loop]:
-        """List all registered loops."""
         return list(self._loops.values())
-    
-    async def execute(
-        self,
-        loop_name: str,
-        inputs: dict[str, Any],
-        context: Any | None = None
-    ) -> LoopResult:
-        """
-        Execute a loop with given inputs.
-        
-        Args:
-            loop_name: Name of loop to execute
-            inputs: Input values for the loop
-            context: Optional execution context
-            
-        Returns:
-            LoopResult with execution outcome
-        """
-        loop = self._loops.get(loop_name)
-        if not loop:
-            raise ValueError(f"Loop '{loop_name}' not found")
-        
-        # Initialize state
-        state = LoopState(
-            loop=loop,
-            inputs=inputs,
-            status=LoopStatus.RUNNING
-        )
-        self._running[loop_name] = state
-        
-        try:
-            # Execute steps
-            for i, step in enumerate(loop.steps):
-                state.current_step = i
-                state.update_activity()
-                
-                # Execute step (placeholder - actual implementation in Phase 13)
-                # result = await self._execute_step(step, state, context)
-                
-            # Evaluate success
-            success = self._evaluate_success(loop, state)
-            
-            return LoopResult(
-                success=success,
-                outputs=state.outputs,
-                state=state,
-                steps_completed=len(loop.steps) if success else state.current_step,
-                steps_total=len(loop.steps)
-            )
-            
-        finally:
-            if loop_name in self._running:
-                del self._running[loop_name]
-    
+
+    async def _execute_step(self, step: LoopStep, state: LoopState, context: Any | None) -> Any:
+        executor = self.step_executor or (context.get("step_executor") if isinstance(context, dict) else None)
+        if executor is None:
+            state.outputs[step.name] = {
+                "status": "completed",
+                "description": step.description,
+                "agent": step.agent,
+                "model": step.model,
+            }
+            return state.outputs[step.name]
+        result = executor(step, state, context)
+        if inspect.isawaitable(result):
+            result = await asyncio.wait_for(result, timeout=max(1, step.timeout_seconds))
+        state.outputs[step.name] = result
+        return result
+
     def _evaluate_success(self, loop: Loop, state: LoopState) -> bool:
-        """Evaluate if loop succeeded based on criteria."""
-        # Placeholder - actual implementation in Phase 13
+        if state.status == LoopStatus.FAILED:
+            return False
+        if not loop.steps:
+            return True
+        for criteria in loop.failure_criteria:
+            if state.outputs.get(criteria) in (False, None):
+                return False
+        if not loop.success_criteria:
+            return all(step.name in state.outputs for step in loop.steps)
+        for criteria in loop.success_criteria:
+            if criteria in state.outputs and state.outputs[criteria] not in (True, "ok", "passed", "completed"):
+                return False
         return True
+
+    async def execute(self, loop_name: str, inputs: dict[str, Any], context: Any | None = None) -> LoopResult:
+        loop = self._loops.get(loop_name)
+        if loop is None:
+            raise ValueError(f"Loop '{loop_name}' not found")
+        started = time.monotonic()
+        state = LoopState(loop=loop, inputs=dict(inputs), status=LoopStatus.RUNNING)
+        self._running[loop_name] = state
+        try:
+            for index, step in enumerate(loop.steps):
+                state.current_step = index
+                state.update_activity()
+                action = step.name
+                if loop.approval_policy and loop.approval_policy.requires_approval(action):
+                    state.status = LoopStatus.WAITING_APPROVAL
+                    raise PermissionError(f"approval required for loop step '{action}'")
+                attempts = 0
+                while True:
+                    try:
+                        await self._execute_step(step, state, context)
+                        break
+                    except Exception as exc:  # noqa: BLE001 - loop boundary captures step failures
+                        error_type = type(exc).__name__
+                        if not loop.retry_policy or not loop.retry_policy.should_retry(error_type, attempts):
+                            state.status = LoopStatus.FAILED
+                            state.error = str(exc)
+                            break
+                        attempts += 1
+                        state.retries[step.name] = attempts
+                        await asyncio.sleep(loop.retry_policy.get_delay(attempts - 1))
+                if state.status == LoopStatus.FAILED:
+                    break
+            if state.status != LoopStatus.FAILED:
+                state.status = LoopStatus.COMPLETED if self._evaluate_success(loop, state) else LoopStatus.FAILED
+            success = state.status == LoopStatus.COMPLETED
+            return LoopResult(success, state.outputs, state, (time.monotonic() - started) * 1000,
+                              state.current_step + (1 if success and loop.steps else 0), len(loop.steps))
+        finally:
+            self._running.pop(loop_name, None)
