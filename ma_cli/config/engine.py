@@ -64,10 +64,25 @@ class ConfigurationEngine:
     """Load, validate and persist AIO-CLi configuration."""
 
     DEFAULT_CONFIG_PATH = Path.home() / ".ma-cli" / "config.yaml"
+    ENV_OVERRIDES = {
+        "ollama": ("OLLAMA_BASE_URL", None),
+        "omniroute": ("OMNIROUTE_BASE_URL", "OMNIROUTE_API_KEY"),
+        "9router": ("NINEROUTER_BASE_URL", "NINEROUTER_API_KEY"),
+        "openrouter": ("OPENROUTER_BASE_URL", "OPENROUTER_API_KEY"),
+    }
 
     def __init__(self, config_path: Path | None = None):
         self.config_path = config_path or self.DEFAULT_CONFIG_PATH
         self._config: Config | None = None
+
+    @classmethod
+    def _environment_overrides(cls, provider: str) -> tuple[str | None, str | None]:
+        """Read local provider endpoint/key overrides without persisting secrets."""
+        url_var, key_var = cls.ENV_OVERRIDES.get(provider, (None, None))
+        return (
+            os.getenv(url_var) if url_var else None,
+            os.getenv(key_var) if key_var else None,
+        )
 
     def load(self) -> Config:
         if not self.config_path.exists():
@@ -148,19 +163,21 @@ class ConfigurationEngine:
             providers={
                 "ollama": ProviderConfig(
                     type="openai-compatible", enabled=True,
-                    base_url="http://localhost:11434/v1",
+                    base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
                 ),
                 "omniroute": ProviderConfig(
                     type="openai-compatible", enabled=True,
-                    base_url="http://localhost:20128/v1",
+                    base_url=os.getenv("OMNIROUTE_BASE_URL", "http://localhost:20128/v1"),
+                    api_key=os.getenv("OMNIROUTE_API_KEY"),
                 ),
                 "9router": ProviderConfig(
                     type="openai-compatible", enabled=True,
-                    base_url="http://localhost:9090/v1",
+                    base_url=os.getenv("NINEROUTER_BASE_URL", "http://localhost:9090/v1"),
+                    api_key=os.getenv("NINEROUTER_API_KEY"),
                 ),
                 "openrouter": ProviderConfig(
                     type="openai-compatible", enabled=bool(os.getenv("OPENROUTER_API_KEY")),
-                    base_url="https://openrouter.ai/api/v1",
+                    base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
                     api_key=os.getenv("OPENROUTER_API_KEY"),
                 ),
             },
@@ -198,21 +215,31 @@ class ConfigurationEngine:
         )
         providers: dict[str, ProviderConfig] = {}
         for name, prov_data in data.get("providers", {}).items():
+            env_url, env_key = self._environment_overrides(name)
             providers[name] = ProviderConfig(
                 type=prov_data.get("type", "openai-compatible"),
                 enabled=prov_data.get("enabled", True),
-                base_url=prov_data.get("base_url", ""),
-                api_key=prov_data.get("api_key") or (os.getenv("OPENROUTER_API_KEY") if name == "openrouter" else None),
+                base_url=env_url or prov_data.get("base_url", ""),
+                api_key=env_key or prov_data.get("api_key"),
                 timeout=prov_data.get("timeout", 60),
                 retry_count=prov_data.get("retry_count", 3),
                 headers=prov_data.get("headers", {}),
             )
-        if "openrouter" not in providers and os.getenv("OPENROUTER_API_KEY"):
-            providers["openrouter"] = ProviderConfig(
-                type="openai-compatible", enabled=True,
-                base_url="https://openrouter.ai/api/v1",
-                api_key=os.getenv("OPENROUTER_API_KEY"),
-            )
+        for name in self.ENV_OVERRIDES:
+            env_url, env_key = self._environment_overrides(name)
+            if name not in providers and (env_url or env_key):
+                defaults = {
+                    "ollama": "http://localhost:11434/v1",
+                    "omniroute": "http://localhost:20128/v1",
+                    "9router": "http://localhost:9090/v1",
+                    "openrouter": "https://openrouter.ai/api/v1",
+                }
+                providers[name] = ProviderConfig(
+                    type="openai-compatible",
+                    enabled=True,
+                    base_url=env_url or defaults[name],
+                    api_key=env_key,
+                )
 
         models: dict[str, ModelAlias] = {}
         for alias, model_data in data.get("models", {}).get("aliases", {}).items():
