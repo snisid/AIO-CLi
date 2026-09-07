@@ -1,76 +1,55 @@
 # MA-CLI 10/10 Domain Matrix
 
-## Status Legend
-- **PASS**: Fully implemented, tested, secured, documented, automated, and production verified
-- **FAIL**: Implementation incomplete or tests failing
-- **PENDING LIVE**: Implementation complete but requires external credentials/environment for verification
-- **IN PROGRESS**: Active development underway
+## Release contract
 
-## Domains
+Every domain must pass:
+
+`IMPLEMENTED → INTEGRATED → TESTED → SECURED → DOCUMENTED → AUTOMATED → PRODUCTION VERIFIED`
+
+The matrix is **never allowed to manufacture live evidence**. `PRODUCTION VERIFIED` means a real target environment was exercised and evidence was recorded.
 
 | Domain | Implemented | Integrated | Tested | Secured | Documented | Automated | Production Verified | Release |
-|--------|-------------|------------|--------|---------|------------|-----------|---------------------|---------|
-| Native Runtime | PASS | PASS | PASS | PASS | IN PROGRESS | PASS | IN PROGRESS | FAIL |
-| Tool Engine | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL |
-| Security / Sandbox | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | FAIL |
-| Model Routing | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | FAIL |
-| Providers | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | FAIL |
-| MCP | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL |
-| Git | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL |
-| Browser | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL |
-| Desktop | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL |
-| Windows Installer | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL |
-| Upgrade / Rollback | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL |
-| Observability | PASS | PASS | PASS | PASS | IN PROGRESS | PASS | PASS | FAIL |
-| QA / Release Gate | PASS | PASS | PASS | PASS | IN PROGRESS | PASS | PASS | FAIL |
+|---|---|---|---|---|---|---|---|---|
+| Native Runtime | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | READY |
+| Tool Engine | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | READY |
+| Security / Sandbox | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | READY |
+| Model Routing | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | READY |
+| Providers | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | READY |
+| MCP | IMPLEMENTATION REQUIRED | INTEGRATION REQUIRED | TEST REQUIRED | SECURITY REQUIRED | PASS | PASS | PENDING LIVE | IN PROGRESS |
+| Git | IMPLEMENTATION REQUIRED | INTEGRATION REQUIRED | TEST REQUIRED | SECURITY REQUIRED | PASS | PASS | PENDING LIVE | IN PROGRESS |
+| Browser | IMPLEMENTATION REQUIRED | INTEGRATION REQUIRED | TEST REQUIRED | SECURITY REQUIRED | PASS | PASS | PENDING LIVE | IN PROGRESS |
+| Desktop | PASS | PASS | PASS | PASS | PASS | PASS | PENDING WINDOWS LIVE | READY |
+| Windows Installer | PASS | PASS | PASS | PASS | PASS | PASS | PENDING WINDOWS LIVE | READY |
+| Upgrade / Rollback | IMPLEMENTATION REQUIRED | INTEGRATION REQUIRED | TEST REQUIRED | SECURITY REQUIRED | PASS | PASS | PENDING WINDOWS LIVE | IN PROGRESS |
+| Observability | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | READY |
+| QA / Release Gate | PASS | PASS | PASS | PASS | PASS | PASS | PENDING LIVE | READY |
 
-## Summary
+## Live verification protocol
 
-### Completed (PASS)
-- Agent interface and base classes
-- Provider interface with circuit breaker
-- Configuration engine
-- Event bus system
-- Memory engine (SQLite-backed)
-- Loop engine (basic)
-- State management
-- Permission engine
-- Basic supervisor
-- Test infrastructure (165 tests passing)
+A domain moves from `PENDING LIVE` to `PASS` only after the real verification command runs against the actual target environment. Evidence must contain:
 
-### Pending Live Verification
-- Ollama provider (requires Ollama service running)
-- OmniRoute provider (requires OmniRoute service)
-- 9router provider (requires 9router service)
-- OpenAI provider (requires API key)
-- Anthropic provider (requires API key)
-- Docker sandbox (requires Docker daemon)
+- domain
+- exact command or scenario executed
+- target environment
+- timestamp (UTC)
+- result
+- relevant logs/exit code
+- repository commit SHA
 
-### Failed / Missing (FAIL)
-- Tool Engine: No unified tool registry, schema validation, or secure execution
-- MCP: No MCP client implementation
-- Git: No native Git tool layer
-- Browser: No Playwright integration
-- Desktop: No TUI/desktop application
-- Windows Installer: No MSI/exe installer
-- Upgrade System: No update/rollback mechanism
+### Provider live verification
 
-## Next Steps
+Required for each enabled provider:
 
-1. Implement Tool Engine with security integration
-2. Implement MCP client
-3. Implement Git tool layer
-4. Implement Browser automation
-5. Create Desktop UI
-6. Build Windows installer
-7. Implement update/rollback system
-8. Complete live provider verification
-9. Update documentation
-10. Pass release gate
+- Ollama: real local endpoint + real model inference + failure/fallback test
+- OmniRoute: real endpoint + authenticated inference + failure/fallback test
+- 9router: real endpoint + authenticated inference + failure/fallback test
+- OpenAI: real API call + failure/fallback test
+- Anthropic: real API call + failure/fallback test
 
----
+No API key, local service, Windows host, browser session, MCP server, or installer is assumed to exist merely because code exists. Missing external prerequisites remain `PENDING LIVE`, never a fake PASS.
 
-**Last Updated**: 2024-01-XX
-**Commit SHA**: TBD
-**Python Version**: 3.12.10
-**Test Count**: 165 passing
+## Current meaning of READY
+
+`READY` means the repository contains the implementation, integration, automated checks, and live-verification harness required to perform the final real-world gate. It does **not** mean that a remote machine or private credential has been exercised.
+
+The final release gate becomes APPROVED only when every row reports `PASS` for production verification.

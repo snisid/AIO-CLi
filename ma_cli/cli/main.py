@@ -696,20 +696,23 @@ def run_loop(loop_name: str, input_data: tuple[str, ...]):
 
 @cli.command()
 @click.argument("task")
-def run(task: str):
-    """Run a task."""
-    click.echo(f"Running task: {task}")
-    click.echo("(Task execution will be implemented in Phase 9+)")
-    click.echo("\nFor now, use the following commands to explore MA-CLI:")
-    click.echo("  ma-cli doctor     - Check system status")
-    click.echo("  ma-cli status     - Show current status")
-    click.echo("  ma-cli config     - Show configuration")
-    click.echo("  ma-cli agents     - List available agents")
-    click.echo("  ma-cli provider   - List providers")
-    click.echo("  ma-cli model      - List model aliases")
-    click.echo("  ma-cli memory     - View memory summary")
-    click.echo("  ma-cli sessions   - Manage sessions")
-    click.echo("  ma-cli loop       - Manage loops")
+@click.option("--agent", "agent_name", default=None, help="Preferred registered agent.")
+@click.option("--timeout", default=900, type=click.IntRange(1, 3600), show_default=True)
+@click.option("--retries", default=1, type=click.IntRange(0, 5), show_default=True)
+def run(task: str, agent_name: str | None, timeout: int, retries: int):
+    """Execute a task through the MA-CLI autonomous orchestration runtime."""
+    import asyncio
+    from ..orchestrator import get_orchestrator
+    click.echo(f"MA-CLI: {task}")
+    result = asyncio.run(get_orchestrator().run(
+        task, preferred_agent=agent_name, timeout=timeout, retries=retries
+    ))
+    if result.output:
+        click.echo(result.output)
+    if not result.success:
+        click.echo(f"[FAIL] {result.error}", err=True)
+        raise click.exceptions.Exit(1)
+    click.echo(f"[PASS] agent={result.agent} attempts={result.attempts}")
 
 
 def main():
