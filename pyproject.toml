@@ -15,6 +15,7 @@ dependencies = [
   "pyyaml>=6.0",
   "httpx>=0.25",
   "portalocker>=2.8",
+  "fastapi>=0.115,<1.0",
 ]
 
 [project.optional-dependencies]
