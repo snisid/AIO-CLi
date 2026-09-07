@@ -90,11 +90,14 @@ class ExecutionEngine:
                 task.attempts += 1
                 try:
                     task.result = task.action()
+                    task.error = None
                     task.state = TaskState.PASSED
                 except Exception as exc:  # noqa: BLE001 - task boundary must capture failures
                     task.error = str(exc)
                     if repair and task.attempts < self.max_attempts and repair(task, exc):
-                        task.state = TaskState.REPAIRED
+                        # Repair changes the environment/code; the repaired task
+                        # must be executed again. The next iteration retries it.
+                        task.state = TaskState.PENDING
                     else:
                         task.state = TaskState.FAILED
         report.success = bool(graph.tasks) and all(
