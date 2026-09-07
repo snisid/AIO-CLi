@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AIO-CLi autonomous coding runtime dashboard">
+  <title>AIO-CLi Dashboard</title>
+  <link rel="stylesheet" href="/ui/dashboard/dashboard.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="/assets/logo/ma-cli-animated.svg" alt="AIO-CLi">
+        <div><strong>AIO-CLi</strong><span>Autonomous Runtime</span></div>
+      </div>
+      <nav>
+        <a class="active" href="/dashboard">Dashboard</a>
+        <a href="#runtime">Runtime</a>
+        <a href="#agents">Agents</a>
+        <a href="#providers">Providers</a>
+        <a href="#health">Health</a>
+      </nav>
+      <div class="sidebar-footer">Vercel deployment</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">CONTROL CENTER</p>
+          <h1>AIO-CLi Dashboard</h1>
+          <p class="muted">Native multi-agent runtime status and capability overview.</p>
+        </div>
+        <div class="status-pill" id="global-status"><span></span>Checking runtime…</div>
+      </header>
+
+      <section class="metrics" id="runtime">
+        <article class="card metric"><span>Runtime</span><strong id="metric-runtime">—</strong><small>API availability</small></article>
+        <article class="card metric"><span>Deployment</span><strong id="metric-deployment">—</strong><small>Current platform</small></article>
+        <article class="card metric"><span>Agents</span><strong>6</strong><small>Planner → Finalizer</small></article>
+        <article class="card metric"><span>Capabilities</span><strong>17</strong><small>Native capability layer</small></article>
+      </section>
+
+      <section class="grid-two" id="agents">
+        <article class="card">
+          <div class="section-head"><h2>Agent pipeline</h2><span class="tag">ACTIVE</span></div>
+          <div class="pipeline">
+            <div>Intent Analyzer</div><div>Planner</div><div>Coder</div><div>Tester</div><div>Security</div><div>Finalizer</div>
+          </div>
+        </article>
+        <article class="card" id="health">
+          <div class="section-head"><h2>System health</h2><span class="tag" id="health-tag">CHECKING</span></div>
+          <div class="health-row"><span>FastAPI entrypoint</span><strong id="health-api">—</strong></div>
+          <div class="health-row"><span>Static assets</span><strong id="health-assets">—</strong></div>
+          <div class="health-row"><span>Dashboard route</span><strong id="health-dashboard">—</strong></div>
+        </article>
+      </section>
+
+      <section class="card" id="providers">
+        <div class="section-head"><h2>Provider layer</h2><span class="muted">Credentials remain server-side / local</span></div>
+        <div class="providers">
+          <div><strong>OpenRouter</strong><span>Intelligent model routing</span></div>
+          <div><strong>OmniRoute</strong><span>Local OpenAI-compatible gateway</span></div>
+          <div><strong>9router</strong><span>Local provider aggregation</span></div>
+          <div><strong>Ollama</strong><span>Local model execution</span></div>
+        </div>
+      </section>
+
+      <footer>© AIO-CLi · Native autonomous development runtime</footer>
+    </main>
+  </div>
+  <script src="/ui/dashboard/dashboard.js"></script>
+</body>
+</html>
