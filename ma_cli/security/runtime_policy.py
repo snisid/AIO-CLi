@@ -1,9 +1,9 @@
 """Runtime security policy and workspace sandbox boundary."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-import re
 
 
 @dataclass(frozen=True)
@@ -21,6 +21,14 @@ class RuntimeSecurity:
         r"\b(invoke-webrequest|curl|wget)\b.*\|.*\b(iex|invoke-expression)\b",
         r"\b(reg\s+(add|delete)|sc\s+(create|delete)|bcdedit)\b",
         r"\b(shutdown|restart-computer)\b",
+    )
+
+    INJECTION_PATTERNS = (
+        r"ignore .{0,80}instructions",
+        r"disregard (the|all) (system|developer) prompt",
+        r"you are now (unrestricted|jailbroken|dan)\b",
+        r"reveal (your|the) (system prompt|hidden instructions)",
+        r"<\|?(system|im_start)\|?>",
     )
 
     def __init__(self, workspace: Path):
@@ -45,6 +53,15 @@ class RuntimeSecurity:
         if any(token in normalized for token in ("git push", "docker", "npm publish", "pip install")):
             return SecurityDecision(False, "high", "external or state-changing command requires explicit approval")
         return SecurityDecision(True, "standard", "command allowed by baseline policy")
+
+    def inspect_prompt(self, prompt: str) -> SecurityDecision:
+        normalized = (prompt or "").strip().lower()
+        if not normalized:
+            return SecurityDecision(False, "critical", "empty prompt")
+        for pattern in self.INJECTION_PATTERNS:
+            if re.search(pattern, normalized, re.IGNORECASE):
+                return SecurityDecision(False, "critical", "prompt injection pattern blocked")
+        return SecurityDecision(True, "standard", "prompt accepted")
 
     def authorize_command(self, command: str, approved: bool = False) -> SecurityDecision:
         decision = self.classify_command(command)

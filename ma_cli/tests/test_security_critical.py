@@ -72,10 +72,10 @@ class TestSandboxHardFail:
         )
         
         # Mock docker.from_env to avoid Docker requirement
-        with patch("docker.from_env") as mock_docker_from_env:
+        with patch("ma_cli.sandbox.manager.docker") as mock_docker:
             mock_client = MagicMock()
             mock_client.ping.return_value = True
-            mock_docker_from_env.return_value = mock_client
+            mock_docker.from_env.return_value = mock_client
             
             manager = SandboxManager(config=config)
 

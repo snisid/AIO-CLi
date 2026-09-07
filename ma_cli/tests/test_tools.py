@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ma_cli.tools.registry import ToolRegistry
+from ma_cli.tools.registry import RUNTIME_GRANT, ToolRegistry
 
 
 def test_registry_blocks_path_escape(tmp_path: Path):
@@ -31,7 +31,7 @@ def test_registry_requires_approval_for_high_risk_command(tmp_path: Path):
 
 def test_registry_executes_approved_command_and_audits(tmp_path: Path):
     registry = ToolRegistry(tmp_path)
-    result = registry.execute("run_command", command="echo ok", approved=True)
+    result = registry.execute("run_command", command="echo ok", grant=RUNTIME_GRANT)
     assert result["returncode"] == 0
     assert "ok" in result["stdout"]
     audit = registry.audit_log()
@@ -42,6 +42,16 @@ def test_registry_executes_approved_command_and_audits(tmp_path: Path):
 def test_registry_handles_command_timeout(tmp_path: Path):
     registry = ToolRegistry(tmp_path)
     command = "Start-Sleep -Seconds 2" if __import__("os").name == "nt" else "sleep 2"
-    result = registry.execute("run_command", command=command, timeout=1, approved=True)
+    result = registry.execute("run_command", command=command, timeout=1, grant=RUNTIME_GRANT)
     assert result["returncode"] == -1
     assert "timed out" in result["stderr"]
+
+
+def test_model_cannot_forge_approval(tmp_path: Path):
+    registry = ToolRegistry(tmp_path)
+    with pytest.raises(PermissionError):
+        registry.execute("run_command", command="echo pwned", approved=True)
+    with pytest.raises(PermissionError):
+        registry.execute("run_command", command="echo pwned", grant=True)
+    with pytest.raises(PermissionError):
+        registry.execute("run_command", command="echo pwned; true", grant=RUNTIME_GRANT)

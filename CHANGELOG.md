@@ -1,35 +1,37 @@
-Voici votre fichier **`Changelog.md`** généré et prêt à être téléchargé / visualisé. Le fichier a été ouvert directement dans l'aperçu.
-
-### Contenu du fichier :
-
-```markdown
 # Changelog
 
-All notable changes to MA-CLI will be documented in this file.
+All notable changes to MA-CLI are documented in this file.
 
-## [1.0.0] - 2024-01-17
+## [1.0.0] - 2026-09-07
 
 ### Added
-- **Core Architecture**: Modular multi-agent system with NativeAgent, Planner, Coder, Tester, Debugger, Reviewer, Security, and Research agents.
-- **Providers**: Full support for Ollama (local), OmniRoute, 9router, OpenAI, and Anthropic with automatic fallback.
-- **Security Engine**: Path traversal protection, shell injection prevention, prompt injection defense, and sandbox isolation (Docker).
-- **Permissions**: Granular permission levels (Read, Write, Execute, High Risk, Critical) with approval gates.
-- **Session Management**: SQLite-based persistence with `ma-cli resume` capability.
-- **Windows Support**: Native PowerShell installer (`install.ps1`) and path handling.
-- **CLI Commands**: `run`, `doctor`, `agents`, `models`, `provider`, `session`, `resume`, `config`, `sandbox`, `git`.
-- **Documentation**: Comprehensive guides for installation, architecture, security, and providers.
+- NativeAgent registered as a first-class agent with cancel/inspect/review.
+- Real loop execution with retries, approval gates, and fail-closed success criteria.
+- Tool engine expansions: edit_file, delete_file, search, glob, git, http_get.
+- Git engine with workspace bounds and explicit approval for destructive operations.
+- MCP JSON-RPC stdio client: connect, list tools, call, ping, restart, disconnect.
+- Browser engine with swappable drivers (in-memory tests, Playwright when installed).
+- Upgrade/rollback/repair/diagnostics manager with filesystem backups.
+- Secret store with 0600 file permissions and log redaction.
+- Allow-listed plugin loader and terminal dashboard (`ma-cli tui`).
+- Prompt-injection inspection on the native runtime.
+- CLI groups: git, mcp, browser, secrets, upgrade, plugins, sandbox, tui.
+- LICENSE (MIT), install.sh, and setup-ma-cli.ps1.
 
 ### Changed
-- Renamed project to MA-CLI v1.0.0.
-- Optimized dependency management (optional extras for cloud providers).
-
-### Fixed
-- Resolved timezone issues in memory engine.
-- Fixed path resolution on Windows for symlink attacks.
-- Corrected provider timeout handling.
+- `ma-cli loop run` executes registered loops instead of printing a placeholder.
+- `ma-cli doctor` reports agents from the live registry.
+- `ma-cli sessions resume` replays a stored request through the orchestrator.
+- Docker SDK is optional; sandbox remains fail-closed when unavailable.
 
 ### Security
-- Implemented strict secret redaction in logs.
-- Added circuit breakers for external providers.
-- Enforced validation gates before task finalization.
-```
+- High-risk tools require an unforgeable in-process `RUNTIME_GRANT`; JSON `approved` flags from models are ignored.
+- `run_command` executes argv lists (PowerShell `-Command` on Windows) and rejects shell metacharacters.
+- Secret store encrypts values at rest (PBKDF2 + HMAC); plaintext files are migrated and never logged.
+- Plugins load `PLUGIN` dict literals via AST only — source is never `exec`'d.
+- Release gate stays BLOCKED while any domain is `PENDING LIVE`.
+- Destructive git operations cannot run without `--approved`.
+- Prompt injection patterns are blocked before native execution.
+
+### Notes
+- Production verification for live providers, Windows hosts, and real MCP/browser sessions remains PENDING LIVE. Code completeness is not a substitute for that evidence.

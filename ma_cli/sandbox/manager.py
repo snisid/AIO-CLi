@@ -16,7 +16,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import docker  # type: ignore
+try:
+    import docker  # type: ignore
+except ImportError:  # pragma: no cover - optional extra
+    docker = None  # type: ignore
 
 from ..core.models import HealthStatus
 from ..events.bus import EventBus
@@ -93,17 +96,20 @@ class SandboxManager:
         self.config = config or SandboxConfig()
         self.permission_engine = permission_engine
         self.event_bus = event_bus
-        self._docker_client: docker.DockerClient | None = None
+        self._docker_client: Any | None = None
         self._active_containers: dict[str, Any] = {}
         self._workspace_roots: dict[str, Path] = {}
         
     @property
-    def docker_client(self) -> docker.DockerClient:
+    def docker_client(self) -> Any:
         """Get Docker client, raising error if unavailable."""
+        if docker is None:
+            raise SandboxUnavailableError(
+                "Docker SDK is not installed. Sandbox enforcement requires Docker. Task aborted."
+            )
         if self._docker_client is None:
             try:
                 self._docker_client = docker.from_env()
-                # Test connection
                 self._docker_client.ping()
             except Exception as e:
                 logger.error(f"Docker unavailable: {e}")
@@ -115,6 +121,8 @@ class SandboxManager:
     
     def is_available(self) -> bool:
         """Check if Docker sandbox is available."""
+        if docker is None:
+            return False
         try:
             client = docker.from_env()
             client.ping()
@@ -372,17 +380,6 @@ class SandboxManager:
             )
             
             return result
-            
-        except docker.errors.APIError as e:
-            logger.error(f"Docker API error: {e}")
-            return SandboxResult(
-                success=False,
-                exit_code=-1,
-                stdout="",
-                stderr=f"Docker API error: {e}",
-                duration_ms=int((datetime.utcnow() - start_time).total_seconds() * 1000),
-                error=str(e)
-            )
             
         except asyncio.TimeoutError:
             logger.error(f"Execution timeout after {timeout}s")

@@ -12,22 +12,16 @@
 ### Windows (PowerShell)
 
 ```powershell
-# Run the installer
-.\setup-ma-cli.ps1
-
-# Or download and run
-Invoke-WebRequest -Uri "https://ma-cli.example.com/install.ps1" -OutFile "install.ps1"
-.\install.ps1
+# From a clone of https://github.com/snisid/AIO-CLi
+.\installer\setup-ma-cli.ps1
 ```
 
 ### Linux/macOS
 
 ```bash
-# Download and run installer
-curl -fsSL https://ma-cli.example.com/install.sh | bash
-
-# Or use pip
-pip install ma-cli
+git clone https://github.com/snisid/AIO-CLi.git
+cd AIO-CLi
+bash scripts/install.sh
 ```
 
 ---

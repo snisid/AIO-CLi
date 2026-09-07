@@ -73,6 +73,7 @@ The repository is being hardened incrementally. **The project does not claim glo
 
 ```bash
 pip install -e ".[dev]"
+# or: bash scripts/install.sh
 ma-cli doctor
 ma-cli init
 ma-cli run "Build authentication with RBAC"

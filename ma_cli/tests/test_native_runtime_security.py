@@ -5,7 +5,7 @@ import pytest
 from ma_cli.runtime.native import NativeAgent
 from ma_cli.runtime.planner import IntentAnalyzer, Planner, TaskRole
 from ma_cli.security.runtime_policy import RuntimeSecurity
-from ma_cli.tools.registry import ToolRegistry
+from ma_cli.tools.registry import RUNTIME_GRANT, ToolRegistry
 
 
 def test_planner_creates_ordered_autonomous_graph():
@@ -37,7 +37,7 @@ def test_registry_requires_approval_for_high_risk(tmp_path: Path):
 
 def test_registry_records_audit_for_approved_command(tmp_path: Path):
     registry = ToolRegistry(tmp_path)
-    result = registry.execute("run_command", command="python --version", approved=True)
+    result = registry.execute("run_command", command="python --version", grant=RUNTIME_GRANT)
     assert result["returncode"] == 0
     assert registry.audit_log()[-1]["status"] == "success"
 

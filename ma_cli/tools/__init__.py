@@ -1,3 +1,4 @@
 """Built-in MA-CLI tools."""
-from .registry import ToolRegistry, get_tool_registry
-__all__ = ["ToolRegistry", "get_tool_registry"]
+from .registry import RUNTIME_GRANT, RuntimeGrant, ToolRegistry, ToolSpec, get_tool_registry
+
+__all__ = ["RUNTIME_GRANT", "RuntimeGrant", "ToolRegistry", "ToolSpec", "get_tool_registry"]

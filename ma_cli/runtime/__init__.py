@@ -1,10 +1,19 @@
 """Native autonomous runtime for MA-CLI."""
 
+from .gap_closure import ExecutionEngine, ExecutionReport, Task, TaskGraph, TaskState
 from .native import NativeAgent, NativeRuntimeResult
-from .planner import IntentAnalyzer, Planner, TaskGraph
-from .gap_closure import ExecutionEngine, ExecutionReport, Task, TaskState
+from .planner import IntentAnalyzer, Planner
+from .planner import TaskGraph as PlanTaskGraph
 
 __all__ = [
-    "NativeAgent", "NativeRuntimeResult", "IntentAnalyzer", "Planner", "TaskGraph",
-    "ExecutionEngine", "ExecutionReport", "Task", "TaskState",
+    "ExecutionEngine",
+    "ExecutionReport",
+    "IntentAnalyzer",
+    "NativeAgent",
+    "NativeRuntimeResult",
+    "PlanTaskGraph",
+    "Planner",
+    "Task",
+    "TaskGraph",
+    "TaskState",
 ]

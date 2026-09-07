@@ -22,6 +22,7 @@ from ..memory.engine import (
 from ..state.manager import get_state_manager
 from ..supervisor.engine import get_supervisor
 from ..workspace.manager import get_workspace_manager
+from .extras import register_extra_commands
 
 
 @click.group()
@@ -217,11 +218,13 @@ def doctor():
     
     # Agent status
     click.echo("\nAgents:")
-    click.echo("  ✓ NativeAgent ready")
-    click.echo("  ⚠ ClaudeAgent requires API key")
-    click.echo("  ⚠ CodexAgent requires API key")
-    click.echo("  ⚠ QwenAgent requires configuration")
-    click.echo("  ⚠ ZcodeAgent requires configuration")
+    try:
+        from ..agents import get_agent_registry
+        for agent in get_agent_registry().list_all():
+            click.echo(f"  • {agent.name}: status={agent.status.value} health={agent.health.value}")
+    except Exception as e:
+        click.echo(f"  ✗ Agent registry error: {e}")
+        issues.append(f"Agent registry error: {e}")
     
     # Overall status
     click.echo("\n" + "=" * 50)
@@ -583,6 +586,15 @@ def resume_session(session_id: str):
     
     if state.errors:
         click.echo(f"Errors: {len(state.errors)}")
+    if state.request:
+        import asyncio
+        from ..orchestrator import get_orchestrator
+        click.echo("Replaying pending request through the orchestrator...")
+        result = asyncio.run(get_orchestrator().run(state.request))
+        if not result.success:
+            click.echo(f"[FAIL] {result.error}", err=True)
+            raise click.exceptions.Exit(1)
+        click.echo(result.output or "[PASS] session resumed")
 
 
 @sessions.command("show")
@@ -658,7 +670,8 @@ def list_loops():
 @click.option("--agents", multiple=True, help="Agents to use (can be specified multiple times)")
 def create_loop(name: str, objective: str, agents: tuple[str, ...]):
     """Create a new loop definition."""
-    from ..loops.engine import LoopDefinition, get_loop_engine
+    from ..loops import get_loop_engine
+    from ..loops.engine import LoopDefinition
     
     loop_engine = get_loop_engine()
     
@@ -678,7 +691,7 @@ def create_loop(name: str, objective: str, agents: tuple[str, ...]):
 @click.option("--input", "input_data", multiple=True, help="Input data (key=value)")
 def run_loop(loop_name: str, input_data: tuple[str, ...]):
     """Run a loop."""
-    from ..loops.engine import get_loop_engine
+    from ..loops import get_loop_engine
     
     loop_engine = get_loop_engine()
     
@@ -691,7 +704,13 @@ def run_loop(loop_name: str, input_data: tuple[str, ...]):
     
     click.echo(f"Running loop: {loop_name}")
     click.echo(f"Inputs: {inputs or 'none'}")
-    click.echo("(Loop execution will be fully implemented in Phase 13+)")
+    import asyncio
+    result = asyncio.run(loop_engine.execute(loop_name, inputs))
+    click.echo(f"success={result.success} steps={result.steps_completed}/{result.steps_total}")
+    if result.state.error:
+        click.echo(f"error: {result.state.error}", err=True)
+    if not result.success:
+        raise click.exceptions.Exit(1)
 
 
 @cli.command()
@@ -713,6 +732,9 @@ def run(task: str, agent_name: str | None, timeout: int, retries: int):
         click.echo(f"[FAIL] {result.error}", err=True)
         raise click.exceptions.Exit(1)
     click.echo(f"[PASS] agent={result.agent} attempts={result.attempts}")
+
+
+register_extra_commands(cli)
 
 
 def main():

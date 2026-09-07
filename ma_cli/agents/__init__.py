@@ -1,5 +1,6 @@
 """Agents module initialization."""
 
+from ..runtime.native import NativeAgent
 from .adapters import (
     AgentConfig,
     AgentRegistry,
@@ -16,42 +17,40 @@ from .adapters import (
 )
 from .base import Agent, AgentInfo
 from .extended_agents import (
-    GStackAgent,
-    ClaudeMEMAgent,
-    SecurityReviewAgent,
-    CodeReviewAgent,
-    FrontendDesignAgent,
-    SuperPowersAgent,
-    ComposioAgent,
-    get_extended_agent,
     EXTENDED_AGENTS_REGISTRY,
+    ClaudeMEMAgent,
+    CodeReviewAgent,
+    ComposioAgent,
+    FrontendDesignAgent,
+    GStackAgent,
+    SecurityReviewAgent,
+    SuperPowersAgent,
+    get_extended_agent,
 )
 
 __all__ = [
-    # Base
     "Agent",
-    "AgentInfo",
-    # Adapters
     "AgentConfig",
+    "AgentInfo",
     "AgentRegistry",
     "AgentResult",
     "CLIInfo",
     "ClaudeAgent",
+    "ClaudeMEMAgent",
+    "CodeReviewAgent",
     "CodexAgent",
+    "ComposioAgent",
+    "EXTENDED_AGENTS_REGISTRY",
     "ExternalAgentBase",
+    "FrontendDesignAgent",
+    "GStackAgent",
     "HermesAgent",
+    "NativeAgent",
     "OpenClawAgent",
     "QwenAgent",
+    "SecurityReviewAgent",
+    "SuperPowersAgent",
     "ZcodeAgent",
     "get_agent_registry",
-    # Extended Agents
-    "GStackAgent",
-    "ClaudeMEMAgent",
-    "SecurityReviewAgent",
-    "CodeReviewAgent",
-    "FrontendDesignAgent",
-    "SuperPowersAgent",
-    "ComposioAgent",
     "get_extended_agent",
-    "EXTENDED_AGENTS_REGISTRY",
 ]

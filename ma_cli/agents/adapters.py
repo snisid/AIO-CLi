@@ -593,7 +593,12 @@ class AgentRegistry:
     
     def _register_default_agents(self) -> None:
         """Register all default agents."""
+        from pathlib import Path
+
+        from ..runtime.native import NativeAgent
+
         agents = [
+            NativeAgent(Path.cwd()),
             ClaudeAgent(),
             CodexAgent(),
             QwenAgent(),

@@ -5,9 +5,10 @@ contracts without pretending that external environments are live-verified.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Generic, TypeVar
+from typing import Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -94,7 +95,14 @@ class ExecutionEngine:
                 except Exception as exc:  # noqa: BLE001 - task boundary must capture failures
                     task.error = str(exc)
                     if repair and task.attempts < self.max_attempts and repair(task, exc):
-                        task.state = TaskState.REPAIRED
+                        task.attempts += 1
+                        try:
+                            task.result = task.action()
+                            task.state = TaskState.REPAIRED
+                            task.error = None
+                        except Exception as retry_exc:  # noqa: BLE001
+                            task.error = str(retry_exc)
+                            task.state = TaskState.FAILED
                     else:
                         task.state = TaskState.FAILED
         report.success = bool(graph.tasks) and all(

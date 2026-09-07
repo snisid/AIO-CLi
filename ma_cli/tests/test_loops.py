@@ -163,3 +163,47 @@ class TestLoopExecution:
             await engine.execute("unknown_loop", {})
         
         assert "not found" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_runs_handlers_and_honors_criteria(self):
+        engine = LoopEngine()
+        engine.register(Loop(
+            name="gated",
+            objective="Must meet criteria",
+            steps=[LoopStep(name="implement"), LoopStep(name="verify")],
+            success_criteria=["tests_pass"],
+        ))
+        result = await engine.execute("gated", {}, context={
+            "step_handlers": {
+                "implement": lambda step, state: {"wrote": True},
+                "verify": lambda step, state: {"tests_pass": True},
+            },
+            "sleep": lambda _seconds: None,
+        })
+        assert result.success is True
+        assert result.steps_completed == 2
+
+    @pytest.mark.asyncio
+    async def test_missing_success_criteria_fails_closed(self):
+        engine = LoopEngine()
+        engine.register(Loop(
+            name="gated-fail",
+            objective="Must fail without evidence",
+            steps=[LoopStep(name="implement")],
+            success_criteria=["tests_pass"],
+        ))
+        result = await engine.execute("gated-fail", {})
+        assert result.success is False
+
+    @pytest.mark.asyncio
+    async def test_approval_gate_blocks_unapproved_step(self):
+        engine = LoopEngine()
+        engine.register(Loop(
+            name="deploy",
+            objective="Needs approval",
+            steps=[LoopStep(name="deploy")],
+            approval_policy=ApprovalPolicy(require_approval_for=["deploy"]),
+        ))
+        result = await engine.execute("deploy", {})
+        assert result.success is False
+        assert result.state.status.value == "waiting_approval"
