@@ -26,8 +26,20 @@ jobs:
       - run: python -m mypy ma_cli
       - run: python -m pip install pip-audit
       - run: python -m pip_audit
-      - run: python scripts/release_gate.py
+      - run: python scripts/release_gate_v2.py
       - run: python -m build
+
+  browser-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[all,dev]"
+      - run: python -m playwright install --with-deps chromium
+      - run: python -m pytest -q ma_cli/tests/test_browser_engine.py
 
   provider-evidence:
     runs-on: ubuntu-latest
@@ -36,7 +48,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install httpx
+      - run: python -m pip install -e ".[dev]"
       - name: Live provider verification
         env:
           OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
@@ -44,6 +56,7 @@ jobs:
           OMNIROUTE_API_KEY: ${{ secrets.OMNIROUTE_API_KEY }}
           NINEROUTER_BASE_URL: ${{ secrets.NINEROUTER_BASE_URL }}
           NINEROUTER_API_KEY: ${{ secrets.NINEROUTER_API_KEY }}
+          OPENROUTER_BASE_URL: ${{ secrets.OPENROUTER_BASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/live_provider_verification.py

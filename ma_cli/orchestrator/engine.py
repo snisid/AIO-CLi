@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ..agents.adapters import get_agent_registry
 from ..core.models import ExecutionResult, Task
+from ..models.intelligent import IntelligentRouter
 from ..runtime.native import NativeAgent
 
 
@@ -27,14 +28,15 @@ class OrchestrationResult:
 class Orchestrator:
     """Coordinates native autonomy and optional external agents.
 
-    NativeAgent is always attempted first. External coding CLIs are fallback
-    integrations, never a required dependency for MA-CLI autonomy.
+    The native runtime is model-backed through the capability-aware intelligent
+    router. External coding CLIs remain optional fallbacks.
     """
 
     def __init__(self, registry=None, workspace: Path | None = None, native_model=None):
         self.registry = registry or get_agent_registry()
         self.workspace = (workspace or Path.cwd()).resolve()
-        self.native = NativeAgent(self.workspace, model=native_model)
+        self.model = native_model or IntelligentRouter()
+        self.native = NativeAgent(self.workspace, model=self.model)
 
     async def run(self, prompt: str, preferred_agent: str | None = None,
                   timeout: int = 900, retries: int = 1, allow_external_fallback: bool = True):
@@ -46,7 +48,8 @@ class Orchestrator:
                 return OrchestrationResult(True, task.id, native.output, agent="native-agent",
                                            attempts=native.attempts, started_at=started,
                                            finished_at=datetime.now(timezone.utc),
-                                           metadata={"evidence": native.evidence})
+                                           metadata={"evidence": native.evidence,
+                                                     "routing": getattr(self.model.last_trace, "__dict__", {})})
             native_error = native.error or "native runtime did not converge"
         except asyncio.TimeoutError:
             native_error = f"native runtime timed out after {timeout}s"
