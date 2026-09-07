@@ -18,6 +18,7 @@ class ModelInfo:
     max_context_tokens: int = 0
     cost_per_token: float = 0.0
     available: bool = True
+    raw_data: dict[str, Any] = field(default_factory=dict)
 
     def has_capabilities(self, required: list[str]) -> bool:
         return not required or all(cap in self.capabilities for cap in required)
@@ -45,11 +46,7 @@ class ChatResponse:
 
 
 class Provider(ABC):
-    """Universal asynchronous provider contract.
-
-    Older provider subclasses may omit ``super().__init__``; the circuit
-    breaker is therefore initialized lazily and remains available uniformly.
-    """
+    """Universal asynchronous provider contract."""
 
     @property
     @abstractmethod
@@ -77,7 +74,6 @@ class Provider(ABC):
         breaker = getattr(self, "_circuit_breaker", None)
         if breaker is None:
             from .circuit_breaker import CircuitBreaker, CircuitConfig
-
             breaker = CircuitBreaker(
                 name=f"provider_{self.name}",
                 config=CircuitConfig(
