@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from ma_cli.github import GitHubAPIError, GitHubClient
 from ma_cli.github.workspace import GitHubWorkspaceError, import_repository
+from ma_cli.runtime.connectors import ConnectorControlError, ConnectorRegistry
 from ma_cli.runtime.control import RuntimeController, RuntimeControlError
 
 
@@ -22,6 +23,7 @@ SPLASH_HTML = UI_ROOT / "splash" / "splash.html"
 DASHBOARD_HTML = UI_ROOT / "dashboard" / "dashboard.html"
 WORKSPACE_ROOT = Path(os.getenv("AIO_CLI_WORKSPACE_ROOT", ROOT / ".aio-workspaces")).expanduser()
 runtime_controller = RuntimeController(WORKSPACE_ROOT)
+connector_registry = ConnectorRegistry()
 
 app = FastAPI(title="AIO-CLi", version="1.0.0", description="Multi-Agent Autonomous Coding Platform")
 
@@ -60,17 +62,30 @@ class ExtensionInstallRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     kind: str = Field(pattern="^(plugin|skill|connector)$")
     version: str = Field(default="0.0.0", max_length=40)
-    source: str = Field(default="local", max_length=500)
+    source: str = Field(default="marketplace", max_length=500)
 
 
 class ExtensionRemoveRequest(BaseModel):
     id: str = Field(min_length=1, max_length=120)
 
 
+class ConnectorConfigureRequest(BaseModel):
+    base_url: str | None = Field(default=None, max_length=500)
+
+
+class ConnectorRequest(BaseModel):
+    path: str = Field(default="", max_length=500)
+    method: str = Field(default="GET", pattern="^(GET|POST|PUT|PATCH|DELETE)$")
+    payload: dict[str, Any] | None = None
+
+
 def _html_file(path: Path, fallback: str) -> HTMLResponse:
     if not path.is_file():
         return HTMLResponse(fallback, status_code=200)
-    return HTMLResponse(path.read_text(encoding="utf-8"))
+    html = path.read_text(encoding="utf-8")
+    if path == DASHBOARD_HTML:
+        html = html.replace('</body>', '<script src="/ui/dashboard/runtime-control.js?v=runtime1"></script>\n</body>')
+    return HTMLResponse(html)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -177,6 +192,35 @@ async def remove_extension(request: ExtensionRemoveRequest) -> dict[str, Any]:
         return runtime_controller.uninstall_extension(request.id)
     except RuntimeControlError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/connectors")
+async def connectors() -> list[dict[str, Any]]:
+    return connector_registry.list()
+
+
+@app.post("/api/connectors/{connector_id}/configure")
+async def configure_connector(connector_id: str, request: ConnectorConfigureRequest) -> dict[str, Any]:
+    try:
+        return connector_registry.configure(connector_id, request.base_url)
+    except ConnectorControlError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/connectors/{connector_id}/check")
+async def check_connector(connector_id: str) -> dict[str, Any]:
+    try:
+        return await connector_registry.check(connector_id)
+    except ConnectorControlError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/connectors/{connector_id}/request")
+async def connector_request(connector_id: str, request: ConnectorRequest) -> dict[str, Any]:
+    try:
+        return await connector_registry.request(connector_id, request.path, request.method, request.payload)
+    except ConnectorControlError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/github/status")
