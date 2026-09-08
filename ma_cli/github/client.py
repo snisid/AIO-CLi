@@ -38,10 +38,7 @@ class GitHubAPIError(RuntimeError):
 def _git_remote_to_api(url: str) -> str:
     value = url.strip()
     parsed = urlparse(value)
-    if parsed.scheme not in {"http", "https"} or parsed.netloc.lower() not in {
-        "github.com",
-        "www.github.com",
-    }:
+    if parsed.scheme not in {"http", "https"} or parsed.netloc.lower() not in {"github.com", "www.github.com"}:
         raise ValueError("Only github.com repository URLs are supported")
     path = parsed.path.strip("/")
     if path.endswith(".git"):
@@ -49,6 +46,16 @@ def _git_remote_to_api(url: str) -> str:
     parts = path.split("/")
     if len(parts) != 2 or not all(parts):
         raise ValueError("GitHub repository URL must be https://github.com/owner/repo")
+    return f"https://api.github.com/repos/{parts[0]}/{parts[1]}"
+
+
+def _repository_to_api(repository: str) -> str:
+    value = repository.strip()
+    if value.startswith(("http://", "https://")):
+        return _git_remote_to_api(value)
+    parts = value.strip("/").split("/")
+    if len(parts) != 2 or not all(parts):
+        raise ValueError("Repository must be owner/repo or a GitHub repository URL")
     return f"https://api.github.com/repos/{parts[0]}/{parts[1]}"
 
 
@@ -72,10 +79,10 @@ def _read_gh_token() -> str | None:
 
 
 class GitHubClient:
-    """Minimal authenticated GitHub REST client used by the AIO-CLi UI/runtime.
+    """Authenticated GitHub REST client for AIO-CLi.
 
     Authentication is resolved from GITHUB_TOKEN/GH_TOKEN first and then from
-    the local GitHub CLI (`gh auth token`). No token is stored by AIO-CLi.
+    the local GitHub CLI (`gh auth token`). AIO-CLi never persists the token.
     """
 
     api_base = "https://api.github.com"
@@ -139,8 +146,7 @@ class GitHubClient:
         }
 
     async def repository(self, repository: str) -> GitHubRepository:
-        api_url = _git_remote_to_api(repository) if repository.startswith(("http://", "https://")) else f"{self.api_base}/repos/{repository.strip("/")}"
-        data = await self._request("GET", api_url)
+        data = await self._request("GET", _repository_to_api(repository))
         return GitHubRepository(
             full_name=data["full_name"],
             default_branch=data.get("default_branch") or "main",
@@ -153,7 +159,7 @@ class GitHubClient:
     async def pull_requests(self, repository: str, state: str = "open", limit: int = 20) -> list[dict[str, Any]]:
         data = await self._request(
             "GET",
-            f"{self.api_base}/repos/{repository.strip('/')}/pulls",
+            _repository_to_api(repository) + "/pulls",
             params={"state": state, "per_page": max(1, min(limit, 100))},
         )
         return [
@@ -173,7 +179,7 @@ class GitHubClient:
     async def issues(self, repository: str, state: str = "open", limit: int = 20) -> list[dict[str, Any]]:
         data = await self._request(
             "GET",
-            f"{self.api_base}/repos/{repository.strip('/')}/issues",
+            _repository_to_api(repository) + "/issues",
             params={"state": state, "per_page": max(1, min(limit, 100))},
         )
         return [
@@ -183,7 +189,6 @@ class GitHubClient:
                 "state": item["state"],
                 "html_url": item["html_url"],
                 "author": item.get("user", {}).get("login"),
-                "pull_request": "pull_request" in item,
             }
             for item in data
             if "pull_request" not in item
@@ -202,7 +207,7 @@ class GitHubClient:
             raise GitHubAPIError("Authentication is required to create a pull request", 401)
         data = await self._request(
             "POST",
-            f"{self.api_base}/repos/{repository.strip('/')}/pulls",
+            _repository_to_api(repository) + "/pulls",
             json={"title": title, "head": head, "base": base, "body": body, "draft": draft},
         )
         return {
