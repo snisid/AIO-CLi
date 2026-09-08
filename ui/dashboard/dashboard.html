@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="AIO-CLi desktop-style multi-panel workspace">
   <title>AIO-CLi Workspace</title>
-  <link rel="stylesheet" href="/ui/dashboard/dashboard.css?v=a1b911f">
+  <link rel="stylesheet" href="/ui/dashboard/dashboard.css?v=github1">
 </head>
 <body>
   <div class="desktop-shell">
@@ -14,6 +14,7 @@
       <div class="toolbar">
         <button class="tool-btn" id="layout-toggle" title="Basculer entre interface unifiée et 3 panneaux">▦ <span>3 panneaux</span></button>
         <button class="tool-btn" id="detach-all" title="Ouvrir Prompt, Code et Hub dans 3 fenêtres">⧉ <span>3 écrans</span></button>
+        <button class="tool-btn" data-modal="github" title="GitHub connector">◖ <span>GitHub</span></button>
         <button class="tool-btn" data-modal="plugins">◈ <span>Plugins</span></button>
         <button class="tool-btn" data-modal="settings">⚙ <span>Paramètres</span></button>
         <div class="status-pill" id="global-status"><span></span>Connexion…</div>
@@ -25,6 +26,7 @@
         <button class="rail-btn" data-panel="code" title="Code">⌘</button>
         <button class="rail-btn" data-panel="hub" title="Hub">◉</button>
         <div class="rail-spacer"></div>
+        <button class="rail-btn" data-modal="github" title="GitHub">◖</button>
         <button class="rail-btn" data-modal="settings" title="Paramètres">⚙</button>
       </aside>
       <main class="panels" id="panels">
@@ -32,7 +34,7 @@
           <div class="panel-header"><div><span class="eyebrow">01 · PROMPT</span><h1>Nouvelle tâche</h1></div><button class="icon-btn" data-modal="settings">⚙</button></div>
           <div class="context-row"><span class="context-chip">Projet : AIO-CLi</span><span class="context-chip" id="mode-chip">Mode : Supervised</span><span class="context-chip" id="model-chip">Router : Intelligent</span></div>
           <div class="prompt-body"><textarea id="prompt-input" placeholder="Décris ce que AIO-CLi doit construire, corriger, rechercher ou vérifier…"></textarea><div class="prompt-actions"><div class="hint">Entrée pour exécuter · Shift+Entrée pour nouvelle ligne</div><button id="run-task" class="primary-btn" type="button">Lancer <span>▶</span></button></div></div>
-          <div class="prompt-options"><button class="soft-btn" data-modal="settings" type="button">▣ Contexte</button><button class="soft-btn" data-modal="plugins" type="button">◈ Outils</button><button class="soft-btn" id="clear-prompt" type="button">Effacer</button></div>
+          <div class="prompt-options"><button class="soft-btn" data-modal="settings" type="button">▣ Contexte</button><button class="soft-btn" data-modal="plugins" type="button">◈ Outils</button><button class="soft-btn" data-modal="github" type="button">◖ Add from GitHub</button><button class="soft-btn" id="clear-prompt" type="button">Effacer</button></div>
           <div class="history"><div class="subhead"><span>Activité récente</span><button id="clear-history" class="link-btn" type="button">Effacer</button></div><div id="history-list" class="history-list"><div class="empty">Aucune tâche locale.</div></div></div>
         </section>
         <section class="panel code-panel" data-role="code">
@@ -60,7 +62,16 @@ async def health():
   <div class="modal-backdrop" id="modal-backdrop" hidden>
     <section class="modal" id="settings-modal" data-modal-panel="settings" hidden><div class="modal-head"><div><span class="eyebrow">CONFIGURATION</span><h2>Paramètres AIO-CLi</h2></div><button class="icon-btn" data-close-modal type="button">×</button></div><div class="settings-grid"><label>Mode d'exécution<select id="setting-mode"><option>Interactive</option><option selected>Supervised</option><option>Autonomous</option><option>Read-only</option></select></label><label>Routeur<select id="setting-router"><option selected>Intelligent</option><option>OpenRouter</option><option>OmniRoute</option><option>9router</option><option>Ollama</option></select></label><label>Raisonnement<select id="setting-reasoning"><option>Fast</option><option>Medium</option><option selected>High</option><option>Max</option></select></label><label>Approbation shell<select id="setting-shell"><option selected>Demander avant exécution</option><option>Toujours autoriser</option><option>Toujours bloquer</option></select></label></div><div class="setting-checks"><label><input id="setting-failover" type="checkbox" checked> Failover automatique</label><label><input id="setting-browser" type="checkbox" checked> Browser / Computer Use</label><label><input id="setting-mcp" type="checkbox" checked> MCP natif</label><label><input id="setting-longrun" type="checkbox" checked> Long-running / checkpoints</label></div><div class="modal-foot"><span id="settings-saved">Paramètres stockés localement</span><button class="primary-btn" id="save-settings" type="button">Enregistrer</button></div></section>
     <section class="modal" id="plugins-modal" data-modal-panel="plugins" hidden><div class="modal-head"><div><span class="eyebrow">EXTENSIONS</span><h2>Plugins & outils</h2></div><button class="icon-btn" data-close-modal type="button">×</button></div><div class="plugin-list"><label><input type="checkbox" checked> MCP Servers <span>Tools · Resources · Prompts</span></label><label><input type="checkbox" checked> Browser Engine <span>Playwright · navigation · screenshots</span></label><label><input type="checkbox" checked> Git Integration <span>status · diff · branches · commits</span></label><label><input type="checkbox" checked> File Intelligence <span>search · context · artifacts</span></label><label><input type="checkbox" checked> Security Choke Point <span>RBAC · approval · audit</span></label><label><input type="checkbox"> External skills <span>Optional repository integrations</span></label></div><div class="modal-foot"><span>Les plugins sont des capacités contrôlées par le runtime.</span><button class="primary-btn" data-close-modal type="button">Terminé</button></div></section>
+    <section class="modal" id="github-modal" data-modal-panel="github" hidden>
+      <div class="modal-head"><div><span class="eyebrow">CONNECTOR</span><h2>GitHub</h2></div><button class="icon-btn" data-close-modal type="button">×</button></div>
+      <div class="github-status-card"><div><strong id="github-status-title">Vérification…</strong><span id="github-status-detail">Recherche d'une session GitHub authentifiée.</span></div><button class="soft-btn" id="github-refresh" type="button">Rafraîchir</button></div>
+      <label class="github-field">Repository URL / owner/repo<input id="github-repository" type="text" placeholder="https://github.com/owner/repo"></label>
+      <div class="github-actions"><button class="soft-btn" id="github-inspect" type="button">Inspecter</button><button class="primary-btn" id="github-import" type="button">Add from GitHub</button></div>
+      <div id="github-repository-info" class="github-info"><span>Entrez un dépôt pour afficher ses métadonnées.</span></div>
+      <div class="github-columns"><div><div class="subhead"><span>Pull Requests</span><button class="link-btn" id="github-load-prs" type="button">Charger</button></div><div id="github-pr-list" class="github-list"><div class="empty">Aucune donnée.</div></div></div><div><div class="subhead"><span>Issues</span><button class="link-btn" id="github-load-issues" type="button">Charger</button></div><div id="github-issue-list" class="github-list"><div class="empty">Aucune donnée.</div></div></div></div>
+      <div class="modal-foot"><span id="github-message">Token non stocké par AIO-CLi.</span><button class="primary-btn" data-close-modal type="button">Terminé</button></div>
+    </section>
   </div>
-  <script src="/ui/dashboard/dashboard.js?v=a1b911f"></script>
+  <script src="/ui/dashboard/dashboard.js?v=github1"></script>
 </body>
 </html>
