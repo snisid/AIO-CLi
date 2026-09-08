@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -110,9 +111,8 @@ async def github_status() -> dict[str, Any]:
 
 @app.get("/api/github/repository")
 async def github_repository(repository: str = Query(min_length=3, max_length=500)) -> dict[str, Any]:
-    client = GitHubClient()
     try:
-        repo = await client.repository(repository)
+        repo = await GitHubClient().repository(repository)
     except (GitHubAPIError, ValueError) as exc:
         raise HTTPException(status_code=getattr(exc, "status_code", 400) or 400, detail=str(exc)) from exc
     return {
